@@ -5,9 +5,10 @@
  */
 import { state, restoreSelection, saveSelection, code, setting } from './store/state.js';
 import { ApiKeyError } from './services/api.js';
-import { getTransactions, syncItem, cachedCounts } from './services/market.js';
+import { getTransactions, syncItem, cachedCounts, historyStatus } from './services/market.js';
 import { getBattles, syncBattles, getCountries } from './services/battles.js';
 import { currentView, matches, tagBattles } from './lib/analysis.js';
+import { fmtDate } from './lib/format.js';
 import * as ApiKey from './components/ApiKey/ApiKey.js';
 import * as StatusBar from './components/StatusBar/StatusBar.js';
 import * as ItemSelector from './components/ItemSelector/ItemSelector.js';
@@ -18,7 +19,7 @@ import * as Heatmap from './components/Heatmap/Heatmap.js';
 import * as Battles from './components/Battles/Battles.js';
 import * as SalesTable from './components/SalesTable/SalesTable.js';
 
-const sync = { running: false, lastSync: null, lastError: null, note: '' };
+const sync = { running: false, lastSync: null, lastError: null, note: '', history: null };
 const status = () => StatusBar.render(sync);
 
 // ---- render ----
@@ -63,7 +64,13 @@ async function refresh() {
   try {
     const key = await ApiKey.requireKey();
     const first = state.txs.length === 0;
-    await syncItem(c, key, p => { if (first) { sync.note = `loading history, page ${p.page} of ${p.maxPages}…`; status(); } });
+    await syncItem(c, key, p => {
+      if (p.phase === 'new' && first) sync.note = `loading history, page ${p.page} of ${p.maxPages}…`;
+      else if (p.phase === 'older') sync.note = `loading older sales, back to ${p.oldest ? fmtDate(p.oldest) : '…'}`;
+      else return;
+      status();
+    });
+    sync.history = await historyStatus(c);
     if (c === code()) {
       state.txs = await getTransactions(c);
       if (state.battlesOn && state.battles.length) tagBattles(state.txs);

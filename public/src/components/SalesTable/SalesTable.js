@@ -19,7 +19,6 @@ export function render(view) {
     ...it.stats.map(k => ({ key: `s:${k}`, label: statLabel(k), num: true })),
     ...(it.stats.length > 1 ? [{ key: 'pts', label: 'Points', num: true }] : []),
     { key: 'ppp', label: it.stats.length === 1 ? `Price / ${statLabel(primaryStat()).toLowerCase()}` : 'Price / point', num: true },
-    { key: 'state', label: 'Condition', num: true },
     ...(state.battlesOn ? [{ key: 'battle', label: 'Battle', num: true }] : []),
   ];
   const val = (t, key) => key === 'ppp' ? pricePerPoint(t)
@@ -53,7 +52,6 @@ export function render(view) {
       else if (c.key === 'ppp') text = Number.isFinite(v) ? fmtMoney(v) : '–';
       else if (c.key === 'pts') text = v.toFixed(1);
       else if (c.key === 'battle') text = battleSymbol(t);
-      else if (c.key === 'state') text = t.state != null ? `${t.state}/${t.maxState}` : '–';
       else text = Number.isFinite(v) ? v : '–';
       if (c.key === 'ts' && isQuick(t)) text += ' <span class="bsym quick">⚡</span>';
       return `<td class="${c.num ? 'num' : ''}">${text}</td>`;

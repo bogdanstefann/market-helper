@@ -71,10 +71,12 @@ the view (`lib/analysis.js → currentView()`) and re-renders everything.
 
 ## Data and limits
 
-- Sales come from `transaction.getPaginatedTransactions` (type `itemMarket`),
-  the first load of an item walks back up to 14 days or 1000 sales; later
-  loads fetch only what is new. Battles from `battle.getBattles`, countries
-  from `country.getAllCountries`.
+- Sales come from `transaction.getPaginatedTransactions` (type `itemMarket`).
+  The first load of an item fetches the newest 1000 sales so the page shows up
+  fast, then every minute it fetches what is new (no cap, so a closed tab does
+  not leave gaps) and 5 more pages of older sales, until the full 14-day
+  window is cached. The header shows the progress. Battles come from
+  `battle.getBattles`, countries from `country.getAllCountries`.
 - Live offers (`itemOffer.getItemOffers`) are not accessible with an API token
   (403), so the app works with completed sales, not current listings.
 - WarEra rate limit: 500 requests/minute per key. A first load of an item
