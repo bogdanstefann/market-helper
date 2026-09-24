@@ -97,13 +97,15 @@ tr.best td:first-child::before { content: "★ "; }
 @media (max-width: 600px) { .tile .v { font-size: 20px; } .chart-wrap { height: 260px; } }
 
 /* segmented control */
+.seg-row { display: flex; gap: 8px; align-items: center; }
+.seg.hidden { display: none; }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .seg button { background: var(--surface-2); color: var(--text-2); border: 0; padding: 6px 12px; font: inherit; font-size: 12px; cursor: pointer; }
 .seg button + button { border-left: 1px solid var(--border); }
 .seg button.active { background: var(--bg); color: var(--text); }
 
 /* heatmap */
-.heat-wrap { overflow-x: auto; }
+.heat-wrap { overflow-x: auto; position: relative; }
 .heat { display: grid; grid-template-columns: 44px repeat(24, minmax(22px, 1fr)); gap: 2px; min-width: 640px; font-size: 11px; }
 .heat .hd { color: var(--muted); text-align: center; padding-bottom: 2px; }
 .heat .rl { color: var(--text-2); display: flex; align-items: center; }
@@ -115,3 +117,15 @@ tr.best td:first-child::before { content: "★ "; }
 .heat-legend .bar { height: 8px; width: 120px; border-radius: 4px; }
 #heatSummary { margin: 0 0 10px; }
 #heatNote { margin: 8px 0 0; }
+
+.heat-tip {
+  position: absolute; z-index: 10; pointer-events: none;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; line-height: 1.4; color: var(--text);
+  box-shadow: 0 6px 20px rgba(0,0,0,.45); white-space: nowrap;
+}
+.heat-tip .t { font-weight: 600; margin-bottom: 2px; }
+.heat-tip .row { display: flex; justify-content: space-between; gap: 16px; color: var(--text-2); }
+.heat-tip .row b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.heat-tip .cheap { color: var(--r-rare); }
+.heat-tip .dear { color: var(--r-mythic); }

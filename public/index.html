@@ -57,13 +57,20 @@
   <section class="panel">
     <div class="panel-head">
       <h2>When do sales happen?</h2>
-      <div class="seg" id="heatMode">
-        <button data-mode="count" class="active">Sales count</button>
-        <button data-mode="price">Price vs. median</button>
+      <div class="seg-row">
+        <div class="seg" id="heatMode">
+          <button data-mode="count" class="active">Sales count</button>
+          <button data-mode="price">Price vs. median</button>
+        </div>
+        <div class="seg" id="heatScale" title="Colour scale cap: percentile of the price deviations">
+          <button data-p="50">P50</button>
+          <button data-p="90" class="active">P90</button>
+          <button data-p="99">P99</button>
+        </div>
       </div>
     </div>
     <p class="muted" id="heatSummary"></p>
-    <div class="heat-wrap"><div class="heat" id="heat"></div></div>
+    <div class="heat-wrap"><div class="heat" id="heat"></div><div class="heat-tip" id="heatTip" hidden></div></div>
     <p class="muted" id="heatNote"></p>
   </section>
 

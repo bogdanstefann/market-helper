@@ -14,6 +14,7 @@ const state = {
   weights: loadWeights(),
   showAll: localStorage.getItem('showAll') !== '0',
   heatMode: localStorage.getItem('heatMode') || 'count',
+  heatPct: Number(localStorage.getItem('heatPct')) || 90,
   sortKey: 'price', sortAsc: true,
   chart: null, timer: null,
 };
@@ -206,9 +207,11 @@ function renderHeatmap(list, hasFilter) {
   }));
 
   const maxN = Math.max(1, ...stats.flat().map(c => c.n));
-  // colour scale capped at the 90th percentile of deviations so one outlier does not flatten the map
+  // colour scale capped at a chosen percentile of deviations so outliers do not flatten the map
   const rels = stats.flat().filter(c => c.n >= MIN_N && c.rel != null).map(c => Math.abs(c.rel)).sort((a, b) => a - b);
-  const maxRel = Math.max(0.05, rels.length ? rels[Math.floor(rels.length * 0.9)] : 0);
+  const idx = Math.min(rels.length - 1, Math.floor(rels.length * state.heatPct / 100));
+  const maxRel = Math.max(0.01, rels.length ? rels[idx] : 0);
+  $('#heatScale').classList.toggle('hidden', mode !== 'price');
 
   const now = new Date();
   const nowD = dayIdx(now), nowH = now.getHours();
@@ -226,13 +229,11 @@ function renderHeatmap(list, hasFilter) {
         cls += ' few';
       }
       if (d === nowD && h === nowH) cls += ' now';
-      const tip = c.n
-        ? `${DAYS[d]} ${pad(h)}:00–${pad(h)}:59 · ${c.n} sale${c.n === 1 ? '' : 's'} · median ${fmtMoney(c.median)} (${fmtPct(c.rel)} vs. overall)`
-        : `${DAYS[d]} ${pad(h)}:00 · no sales`;
-      html += `<div class="${cls}" style="${bg ? `background:${bg}` : ''}" title="${tip}"></div>`;
+      html += `<div class="${cls}" style="${bg ? `background:${bg}` : ''}" data-d="${d}" data-h="${h}"></div>`;
     }
   }
   $('#heat').innerHTML = html;
+  attachHeatTooltip(stats, cells, overallMedian);
 
   // summary
   const byDay = DAYS.map((_, d) => stats[d].reduce((s, c) => s + c.n, 0));
@@ -264,8 +265,46 @@ function renderHeatmap(list, hasFilter) {
 
   const legend = mode === 'count'
     ? `<span class="heat-legend"><span>fewer</span><span class="bar" style="background:linear-gradient(90deg,${seqColor(0.05)},${seqColor(1)})"></span><span>more sales</span></span>`
-    : `<span class="heat-legend"><span>cheaper (−${Math.round(maxRel * 100)}%)</span><span class="bar" style="background:linear-gradient(90deg,${divColor(-1)},${divColor(0)},${divColor(1)})"></span><span>pricier (+${Math.round(maxRel * 100)}%)</span> · hatched = under ${MIN_N} sales</span>`;
+    : `<span class="heat-legend"><span>cheaper (−${(maxRel * 100).toFixed(1)}%)</span><span class="bar" style="background:linear-gradient(90deg,${divColor(-1)},${divColor(0)},${divColor(1)})"></span><span>pricier (+${(maxRel * 100).toFixed(1)}%)</span> · scale capped at P${state.heatPct} of deviations · hatched = under ${MIN_N} sales</span>`;
   $('#heatNote').innerHTML = `${legend}<br>Based on all ${list.length} cached sales${hasFilter ? ' matching your stats' : ''} (the period filter is not applied). Times are in your local time zone. The outlined cell is right now.`;
+}
+
+function attachHeatTooltip(stats, cells, overallMedian) {
+  const heat = $('#heat'), tip = $('#heatTip'), wrap = heat.parentElement;
+  heat.onmouseover = e => {
+    const cell = e.target.closest('.cell');
+    if (!cell) return;
+    const d = Number(cell.dataset.d), h = Number(cell.dataset.h);
+    const c = stats[d][h];
+    const prices = cells[d][h];
+    let body = `<div class="t">${DAYS[d]} ${pad(h)}:00–${pad(h)}:59</div>`;
+    if (!c.n) {
+      body += `<div class="row"><span>Sales</span><b>0</b></div>`;
+    } else {
+      const sorted = [...prices].sort((a, b) => a - b);
+      const relCls = c.rel < 0 ? 'cheap' : c.rel > 0 ? 'dear' : '';
+      body += `<div class="row"><span>Sales</span><b>${c.n}</b></div>
+        <div class="row"><span>Median</span><b>${fmtMoney(c.median)}</b></div>
+        <div class="row"><span>vs. overall median</span><b class="${relCls}">${fmtPct(c.rel)}</b></div>
+        <div class="row"><span>Lowest</span><b>${fmtMoney(sorted[0])}</b></div>
+        <div class="row"><span>Highest</span><b>${fmtMoney(sorted[sorted.length - 1])}</b></div>`;
+      if (c.n < 3) body += `<div class="row"><span>too few sales to colour</span></div>`;
+    }
+    tip.innerHTML = body;
+    tip.hidden = false;
+    positionTip(e);
+  };
+  heat.onmousemove = positionTip;
+  heat.onmouseleave = () => { tip.hidden = true; };
+  function positionTip(e) {
+    if (tip.hidden) return;
+    const r = wrap.getBoundingClientRect();
+    let x = e.clientX - r.left + wrap.scrollLeft + 14;
+    let y = e.clientY - r.top + 14;
+    if (x + tip.offsetWidth > wrap.scrollLeft + wrap.clientWidth) x = e.clientX - r.left + wrap.scrollLeft - tip.offsetWidth - 14;
+    if (y + tip.offsetHeight > wrap.clientHeight) y = e.clientY - r.top - tip.offsetHeight - 14;
+    tip.style.left = `${x}px`; tip.style.top = `${Math.max(0, y)}px`;
+  }
 }
 
 function findCell(stats, target) {
@@ -469,6 +508,14 @@ $('#heatMode').querySelectorAll('button').forEach(b => {
   b.onclick = () => {
     state.heatMode = b.dataset.mode; localStorage.setItem('heatMode', state.heatMode);
     $('#heatMode').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    render();
+  };
+});
+$('#heatScale').querySelectorAll('button').forEach(b => {
+  b.classList.toggle('active', Number(b.dataset.p) === state.heatPct);
+  b.onclick = () => {
+    state.heatPct = Number(b.dataset.p); localStorage.setItem('heatPct', state.heatPct);
+    $('#heatScale').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
     render();
   };
 });
