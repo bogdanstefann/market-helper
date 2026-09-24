@@ -57,13 +57,9 @@
         <span class="hint">sales considered</span>
       </label>
       <label class="field">
-        <span>Match</span>
-        <select id="mode">
-          <option value="min" selected>stats ≥ my values</option>
-          <option value="exact">stats = my values (exact)</option>
-          <option value="near">stats close to mine (±5%)</option>
-        </select>
-        <span class="hint">how stats are compared</span>
+        <span>Tolerance for ±</span>
+        <span class="inline"><input type="number" id="nearPct" min="1" max="50" step="1" style="width:80px"> %</span>
+        <span class="hint">used by the ± mode of a stat</span>
       </label>
       <div class="field">
         <span>Quick sales</span>

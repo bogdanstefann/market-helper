@@ -2,7 +2,7 @@
 import { state, item, primaryStat, setting } from '../../store/state.js';
 import { $, fmtMoney, fmtDate, statLabel } from '../../lib/format.js';
 import { cssVar, hexA, mix } from '../../lib/colors.js';
-import { aggregateByStat, statsText, isQuick, battleText } from '../../lib/analysis.js';
+import { aggregateByStat, statsText, isQuick, battleText, statMode } from '../../lib/analysis.js';
 
 let chart = null;
 let onChange = () => {};
@@ -160,7 +160,8 @@ function targetLinePlugin() {
       ctx.fillStyle = cssVar('--series-2');
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`min ${opts.x}`, x, chartArea.top - 4);
+      const sym = { min: '≥', exact: '=', near: '±' }[statMode(primaryStat())] || '≥';
+      ctx.fillText(`${sym} ${opts.x}`, x, chartArea.top - 4);
       ctx.restore();
     },
   };

@@ -17,3 +17,5 @@
 .formula:not(:empty) { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .check { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .check input { accent-color: var(--series-2); margin: 0; }
+.stat-inline select.mode { min-width: 0; width: 56px; padding: 0 22px 0 8px; font-weight: 600; }
+.stat-inline input { min-width: 0; width: 100px; }

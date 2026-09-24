@@ -4,14 +4,17 @@
  */
 import { state, item, setting, firstWeight } from '../../store/state.js';
 import { $, statLabel } from '../../lib/format.js';
-import { isQuick, baseTxs } from '../../lib/analysis.js';
+import { isQuick, baseTxs, statMode } from '../../lib/analysis.js';
+
+const MODES = [['min', '≥'], ['exact', '='], ['near', '±']];
 
 let onChange = () => {};
 
 export function init(handlers) {
   onChange = handlers.onChange;
   $('#days').onchange = e => { state.days = Number(e.target.value); onChange(); };
-  $('#mode').onchange = e => { state.mode = e.target.value; renderStatInputs(); onChange(); };
+  $('#nearPct').value = String(state.nearPct);
+  $('#nearPct').onchange = e => { const v = Number(e.target.value); if (v > 0) { setting('nearPct', v); onChange(); } };
   $('#excludeQuick').checked = state.excludeQuick;
   $('#excludeQuick').onchange = e => { setting('excludeQuick', e.target.checked ? '1' : '0'); state.excludeQuick = e.target.checked; onChange(); };
   $('#quickSecs').value = String(state.quickSecs);
@@ -25,13 +28,17 @@ export function renderStatInputs() {
   const it = item();
   for (const key of it.stats) {
     const [lo, hi] = it.ranges[key];
-    const wrap = document.createElement('label');
+    const wrap = document.createElement('div');
     wrap.className = 'field';
-    const label = state.mode === 'exact' ? `${statLabel(key)} (exact)` : state.mode === 'near' ? `${statLabel(key)} (±5%)` : `Min ${statLabel(key)}`;
-    wrap.innerHTML = `<span>${label}</span>
-      <input type="number" inputmode="numeric" min="${lo}" max="${hi}" placeholder="${lo}–${hi}" value="${state.minStats[key] ?? ''}">
+    const mode = statMode(key);
+    wrap.innerHTML = `<span>${statLabel(key)}</span>
+      <span class="inline stat-inline">
+        <select class="mode" title="how this stat is compared">${MODES.map(([v, t]) => `<option value="${v}" ${v === mode ? 'selected' : ''}>${t}</option>`).join('')}</select>
+        <input type="number" inputmode="numeric" min="${lo}" max="${hi}" placeholder="${lo}–${hi}" value="${state.minStats[key] ?? ''}">
+      </span>
       <span class="hint">possible: ${lo} – ${hi}</span>`;
     const input = wrap.querySelector('input');
+    wrap.querySelector('select').onchange = e => { state.statModes[key] = e.target.value; setting('statModes', state.statModes); onChange(); };
     input.oninput = () => {
       const v = input.value.trim();
       if (v === '') delete state.minStats[key]; else state.minStats[key] = Number(v);

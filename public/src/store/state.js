@@ -12,7 +12,9 @@ const store = {
 export const state = {
   // selection
   slot: null, rarity: null,
-  minStats: {}, days: 7, mode: 'min',
+  minStats: {}, days: 7,
+  statModes: JSON.parse(store.get('statModes', '{}') || '{}'), // stat -> 'min' | 'exact' | 'near'
+  nearPct: Number(store.get('nearPct', 5)) || 5,
   // persisted settings
   weights: JSON.parse(store.get('weights', '{}') || '{}'),
   showAll: store.get('showAll', '1') !== '0',

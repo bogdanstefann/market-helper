@@ -6,13 +6,16 @@ import { state, item, firstWeight } from '../store/state.js';
 import { statLabel } from './format.js';
 
 // ---- filters ----
+export const statMode = k => state.statModes[k] || 'min';
+
 export function matches(t) {
   for (const [k, want] of Object.entries(state.minStats)) {
     const have = t.skills[k];
     if (typeof have !== 'number') return false;
-    if (state.mode === 'min' && have < want) return false;
-    if (state.mode === 'exact' && have !== want) return false;
-    if (state.mode === 'near' && Math.abs(have - want) > Math.max(1, want * 0.05)) return false;
+    const mode = statMode(k);
+    if (mode === 'min' && have < want) return false;
+    if (mode === 'exact' && have !== want) return false;
+    if (mode === 'near' && Math.abs(have - want) > Math.max(1, want * state.nearPct / 100)) return false;
   }
   return true;
 }

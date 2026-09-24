@@ -50,10 +50,13 @@ the view (`lib/analysis.js → currentView()`) and re-renders everything.
 
 ## Features
 
-- Pick a slot and a rarity, enter the stats you want (minimum, or ±5%),
+- Pick a slot and a rarity, enter the stats you want, each with its own
+  comparison (≥ minimum, = exact, or ± a tolerance in percent, default 5%),
   choose a period, and see the lowest price, median, last sale, best price per
-  point, a price-vs-stat chart (lowest and median price lines over the sales)
-  and a sortable table of matching sales.
+  point, a price-vs-stat chart and a sortable table of matching sales.
+- Chart options (saved in the browser): lowest-price line, median line, one
+  median line per critical-chance level, colouring the dots by critical chance
+  (light at your minimum, dark at the item's maximum), and showing all sales.
 - "Price / point": for equipment, price divided by the single stat. For
   weapons, a weighted score with a slider (default attack 40% / critical
   chance 60%), each stat normalised to its maximum possible value.
