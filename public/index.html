@@ -56,6 +56,19 @@
 
   <section class="panel">
     <div class="panel-head">
+      <h2>When do sales happen?</h2>
+      <div class="seg" id="heatMode">
+        <button data-mode="count" class="active">Sales count</button>
+        <button data-mode="price">Price vs. median</button>
+      </div>
+    </div>
+    <p class="muted" id="heatSummary"></p>
+    <div class="heat-wrap"><div class="heat" id="heat"></div></div>
+    <p class="muted" id="heatNote"></p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
       <h2>Matching sales</h2>
       <span class="muted" id="tableInfo"></span>
     </div>

@@ -24,6 +24,10 @@ Requires Node 20+. No npm dependencies.
   choose a period, and see the lowest price, median, last sale, best price per
   stat point, a price-vs-stat chart (lowest and median price lines over the
   sales) and a table of matching sales.
+- "When do sales happen?" is a weekday × hour heatmap (local time) over all
+  cached sales of the selected item, switchable between sales count and median
+  price relative to the overall median, with a summary of the busiest and
+  cheapest slots.
 - "Price / point" divides the sale price by the primary stat only: attack for
   weapons (critical chance is used as a filter, not in the ratio), and the
   single stat for equipment.

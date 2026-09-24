@@ -95,3 +95,23 @@ tr.best td { color: var(--good); }
 tr.best td:first-child::before { content: "★ "; }
 .empty { color: var(--muted); padding: 16px; text-align: center; }
 @media (max-width: 600px) { .tile .v { font-size: 20px; } .chart-wrap { height: 260px; } }
+
+/* segmented control */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { background: var(--surface-2); color: var(--text-2); border: 0; padding: 6px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.active { background: var(--bg); color: var(--text); }
+
+/* heatmap */
+.heat-wrap { overflow-x: auto; }
+.heat { display: grid; grid-template-columns: 44px repeat(24, minmax(22px, 1fr)); gap: 2px; min-width: 640px; font-size: 11px; }
+.heat .hd { color: var(--muted); text-align: center; padding-bottom: 2px; }
+.heat .rl { color: var(--text-2); display: flex; align-items: center; }
+.heat .cell { aspect-ratio: 1.6; border-radius: 3px; background: var(--surface-2); position: relative; cursor: default; }
+.heat .cell.few { background-image: repeating-linear-gradient(135deg, transparent 0 3px, rgba(255,255,255,.06) 3px 4px); }
+.heat .cell.now { outline: 2px solid var(--series-2); outline-offset: -2px; }
+.heat .cell:hover { outline: 2px solid var(--text); outline-offset: -2px; }
+.heat-legend { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 8px; }
+.heat-legend .bar { height: 8px; width: 120px; border-radius: 4px; }
+#heatSummary { margin: 0 0 10px; }
+#heatNote { margin: 8px 0 0; }
