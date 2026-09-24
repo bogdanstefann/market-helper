@@ -127,5 +127,32 @@ tr.best td:first-child::before { content: "★ "; }
 .heat-tip .t { font-weight: 600; margin-bottom: 2px; }
 .heat-tip .row { display: flex; justify-content: space-between; gap: 16px; color: var(--text-2); }
 .heat-tip .row b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
-.heat-tip .cheap { color: var(--r-rare); }
-.heat-tip .dear { color: var(--r-mythic); }
+.cheap, .heat-tip .cheap { color: var(--r-rare); }
+.dear, .heat-tip .dear { color: var(--r-mythic); }
+
+/* battle symbol */
+.bsym { display: inline-block; min-width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 4px; font-weight: 700; font-size: 11px; color: #fff; background: var(--r-common); }
+.bsym.small { background: #6b6e6a; }
+.bsym.big { background: var(--r-mythic); }
+.bsym.quick { background: transparent; color: var(--muted); border: 1px solid var(--border); font-weight: 500; }
+.field .inline { display: flex; gap: 8px; align-items: center; }
+.field .inline select { min-width: 0; }
+.field .check { color: var(--text); }
+.chart-wrap.short { height: 200px; }
+.chart-wrap.shorter { height: 120px; margin-top: 6px; }
+.sub-h { font-size: 13px; color: var(--text-2); }
+.bar-legend { display: inline-block; width: 18px; height: 10px; background: rgba(230,103,103,.55); border-radius: 2px; margin: 0 4px 0 10px; vertical-align: middle; }
+table.compact td, table.compact th { padding: 6px 8px; }
+
+/* API key */
+.status-box { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+button.link { background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; padding: 0; text-decoration: underline dotted; }
+button.link:hover { color: var(--text); }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+.overlay[hidden] { display: none; }
+.key-panel { width: 100%; max-width: 460px; display: grid; gap: 12px; }
+.key-panel input { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.key-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.btn { background: var(--series-1); color: #fff; border: 0; border-radius: 8px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+.btn:disabled { opacity: .6; cursor: default; }
+.err { color: var(--r-mythic); margin: 0; font-size: 13px; }

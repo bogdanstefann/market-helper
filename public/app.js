@@ -15,6 +15,12 @@ const state = {
   showAll: localStorage.getItem('showAll') !== '0',
   heatMode: localStorage.getItem('heatMode') || 'count',
   heatPct: Number(localStorage.getItem('heatPct')) || 90,
+  excludeQuick: localStorage.getItem('excludeQuick') !== '0',
+  quickSecs: Number(localStorage.getItem('quickSecs')) || 60,
+  battles: [], battleStatus: {},
+  bigM: Number(localStorage.getItem('bigM')) || 20,
+  battlesOn: localStorage.getItem('battlesOn') === '1',
+  timelineCharts: null,
   sortKey: 'price', sortAsc: true,
   chart: null, timer: null,
 };
@@ -33,9 +39,64 @@ const code = () => state.slots[state.slot]?.codes?.[state.rarity] ?? `${state.sl
 const item = () => state.items[code()];
 const primaryStat = () => item().stats[0];
 
+// ---- API key -------------------------------------------------------------
+const KEY_STORAGE = 'warera_api_key';
+const getKey = () => { try { return localStorage.getItem(KEY_STORAGE) || ''; } catch { return ''; } };
+const setKey = k => { try { if (k) localStorage.setItem(KEY_STORAGE, k); else localStorage.removeItem(KEY_STORAGE); } catch {} };
+
+/** Registers the stored key with the server (needed after a server restart, the pool is in memory). */
+async function registerKey(key) {
+  const r = await fetch('/api/key', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) });
+  const body = await r.json().catch(() => ({}));
+  return body.ok ? { ok: true } : { ok: false, error: body.error || `HTTP ${r.status}` };
+}
+
+let keyPromise = null;
+function askForKey(message) {
+  const overlay = $('#keyOverlay'), err = $('#keyError'), input = $('#keyInput');
+  err.textContent = message || ''; err.hidden = !message;
+  input.value = '';
+  overlay.hidden = false;
+  input.focus();
+  if (!keyPromise) keyPromise = new Promise(resolve => { overlay._resolve = resolve; });
+  return keyPromise;
+}
+
+$('#keyForm').onsubmit = async e => {
+  e.preventDefault();
+  const key = $('#keyInput').value.trim();
+  const btn = $('#keySave'), err = $('#keyError');
+  btn.disabled = true; err.hidden = true;
+  const r = await registerKey(key).catch(ex => ({ ok: false, error: ex.message }));
+  btn.disabled = false;
+  if (!r.ok) { err.textContent = r.error; err.hidden = false; return; }
+  setKey(key);
+  $('#keyOverlay').hidden = true;
+  const resolve = $('#keyOverlay')._resolve; keyPromise = null;
+  if (resolve) resolve(key);
+};
+$('#keyShow').onchange = e => { $('#keyInput').type = e.target.checked ? 'text' : 'password'; };
+$('#changeKey').onclick = () => askForKey('');
+
+/** fetch() for our API: sends the key, re-registers it after a server restart, asks for a new one if rejected. */
+async function api(path, retried = false) {
+  let key = getKey();
+  if (!key) key = await askForKey('');
+  const r = await fetch(path, { headers: { 'x-api-key': key } });
+  if (r.status !== 401) return r.json();
+  if (!retried) {
+    const reg = await registerKey(key).catch(ex => ({ ok: false, error: ex.message }));
+    if (reg.ok) return api(path, true);
+    setKey('');
+    await askForKey(reg.error === 'WarEra rejected this API key' ? 'Your saved API key was rejected, please enter a valid one.' : reg.error);
+    return api(path, true);
+  }
+  throw new Error('API key rejected');
+}
+
 // ---- data ---------------------------------------------------------------
 async function loadItems() {
-  const r = await fetch('/api/items').then(r => r.json());
+  const r = await api('/api/items');
   Object.assign(state, { items: r.items, slots: r.slots, rarities: r.rarities, counts: r.counts });
   renderStatus(r.status);
   if (!state.slot) {
@@ -48,17 +109,80 @@ async function loadItems() {
 }
 
 async function loadTransactions() {
-  const r = await fetch(`/api/transactions?code=${code()}`).then(r => r.json());
+  const [r, b] = await Promise.all([
+    api(`/api/transactions?code=${code()}`),
+    state.battlesOn ? api('/api/battles') : null,
+  ]);
   state.txs = r.transactions;
+  if (b) {
+    state.battles = b.battles;
+    state.battleStatus = b.status;
+    tagBattles(state.txs);
+  }
   renderStatus(r.status);
   render();
 }
+
+async function setBattlesOn(on) {
+  state.battlesOn = on;
+  localStorage.setItem('battlesOn', on ? '1' : '0');
+  if (on) {
+    $('#battleEnable').disabled = true;
+    await loadTransactions();
+    $('#battleEnable').disabled = false;
+  } else {
+    state.battles = []; state.battleStatus = {};
+    for (const t of state.txs) { delete t.big; delete t.small; }
+    render();
+  }
+}
+
+// ---- battle tagging ----------------------------------------------------------
+/** A battle is "big" when its biggest round reached the configured damage threshold. */
+const isBigBattle = b => b.maxRound >= state.bigM * 1e6;
+
+/** For each sale, count the small and big battles that were active at that moment. */
+function tagBattles(txs) {
+  const bs = state.battles;
+  for (const t of txs) {
+    let big = 0, small = 0;
+    for (const b of bs) {
+      if (b.start <= t.ts && (b.end == null || b.end >= t.ts)) { if (isBigBattle(b)) big++; else small++; }
+    }
+    t.big = big; t.small = small;
+  }
+}
+/** Quartiles of "big battles active" over the cached sales; used for the load buckets and symbol colour. */
+function battleLoadThresholds() {
+  const v = state.txs.map(t => t.big).sort((a, b) => a - b);
+  if (!v.length) return { p25: 0, p75: 0, max: 0 };
+  return { p25: v[Math.floor(v.length * 0.25)], p75: v[Math.floor(v.length * 0.75)], max: v[v.length - 1] };
+}
+function battleLevel(t) {
+  const th = battleLoadThresholds();
+  return t.big >= th.p75 && th.p75 > th.p25 ? 'busy' : t.big <= th.p25 ? 'calm' : 'normal';
+}
+function isQuick(t) { return t.offerTs != null && t.ts - t.offerTs < state.quickSecs * 1000; }
+/** Base list after the quick-sale exclusion; everything else derives from it. */
+function baseTxs() { return state.excludeQuick ? state.txs.filter(t => !isQuick(t)) : state.txs; }
+function battleSymbol(t) {
+  if (t.big === 0 && t.small === 0) return '';
+  const th = battleLoadThresholds();
+  // grey at/below the calm threshold, full red at the busiest moment seen
+  const k = th.max > th.p25 ? Math.min(1, Math.max(0, (t.big - th.p25) / (th.max - th.p25))) : 0;
+  const c = mix([107, 110, 106], [230, 103, 103], k);
+  return `<span class="bsym" style="background:${c}" title="${battleText(t)}">!</span>`;
+}
+function battleText(t) {
+  return t.big > 0 ? `${t.big} big + ${t.small} small battles active` : t.small > 0 ? `${t.small} small battles active` : 'no battles active';
+}
+function mix(a, b, k) { return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(',')})`; }
 
 function renderStatus(s) {
   const el = $('#status');
   if (s.lastError) { el.textContent = `Sync error: ${s.lastError}`; el.className = 'status err'; return; }
   el.className = 'status';
-  el.textContent = s.lastSync ? `Updated ${fmtDate(s.lastSync)} · refreshes every 60s` : 'Syncing…';
+  el.textContent = s.lastSync ? `Updated ${fmtDate(s.lastSync)} · refreshes every 60s${s.keys ? ` · ${s.keys} key${s.keys === 1 ? '' : 's'} in pool` : ''}` : 'Syncing…';
 }
 
 // ---- controls -----------------------------------------------------------
@@ -174,12 +298,20 @@ function pricePerPoint(t) {
 // ---- render -------------------------------------------------------------
 function render() {
   if (!$('#statInputs').children.length) renderStatInputs();
-  const period = state.txs.filter(inPeriod);
+  const base = baseTxs();
+  const quickCount = state.txs.length - base.length;
+  $('#quickHint').textContent = state.excludeQuick
+    ? `${quickCount} of ${state.txs.length} cached sales excluded (bought under ${state.quickSecs}s after listing)`
+    : `${state.txs.filter(isQuick).length} quick sales included`;
+  const period = base.filter(inPeriod);
   const matched = period.filter(matches);
   const hasFilter = Object.keys(state.minStats).length > 0;
   renderTiles(period, matched, hasFilter);
   renderChart(period, matched, hasFilter);
-  renderHeatmap(state.txs.filter(matches), hasFilter);
+  renderHeatmap(base.filter(matches), hasFilter);
+  $('#battleOff').hidden = state.battlesOn;
+  $('#battleOn').hidden = !state.battlesOn;
+  if (state.battlesOn) renderBattles(matched, hasFilter);
   renderTable(matched, hasFilter);
 }
 
@@ -189,9 +321,11 @@ const dayIdx = d => (d.getDay() + 6) % 7; // Monday = 0
 
 function renderHeatmap(list, hasFilter) {
   const cells = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => []));
+  const bigCells = Array.from({ length: 7 }, () => Array(24).fill(0));
   for (const t of list) {
     const d = new Date(t.ts);
     cells[dayIdx(d)][d.getHours()].push(t.price);
+    if (t.big > 0) bigCells[dayIdx(d)][d.getHours()]++;
   }
   const allPrices = list.map(t => t.price).sort((a, b) => a - b);
   const overallMedian = allPrices.length ? allPrices[Math.floor(allPrices.length / 2)] : 0;
@@ -233,7 +367,7 @@ function renderHeatmap(list, hasFilter) {
     }
   }
   $('#heat').innerHTML = html;
-  attachHeatTooltip(stats, cells, overallMedian);
+  attachHeatTooltip(stats, cells, overallMedian, bigCells);
 
   // summary
   const byDay = DAYS.map((_, d) => stats[d].reduce((s, c) => s + c.n, 0));
@@ -269,7 +403,7 @@ function renderHeatmap(list, hasFilter) {
   $('#heatNote').innerHTML = `${legend}<br>Based on all ${list.length} cached sales${hasFilter ? ' matching your stats' : ''} (the period filter is not applied). Times are in your local time zone. The outlined cell is right now.`;
 }
 
-function attachHeatTooltip(stats, cells, overallMedian) {
+function attachHeatTooltip(stats, cells, overallMedian, bigCells) {
   const heat = $('#heat'), tip = $('#heatTip'), wrap = heat.parentElement;
   heat.onmouseover = e => {
     const cell = e.target.closest('.cell');
@@ -287,7 +421,8 @@ function attachHeatTooltip(stats, cells, overallMedian) {
         <div class="row"><span>Median</span><b>${fmtMoney(c.median)}</b></div>
         <div class="row"><span>vs. overall median</span><b class="${relCls}">${fmtPct(c.rel)}</b></div>
         <div class="row"><span>Lowest</span><b>${fmtMoney(sorted[0])}</b></div>
-        <div class="row"><span>Highest</span><b>${fmtMoney(sorted[sorted.length - 1])}</b></div>`;
+        <div class="row"><span>Highest</span><b>${fmtMoney(sorted[sorted.length - 1])}</b></div>
+        ${state.battlesOn ? `<div class="row"><span>During a big battle</span><b>${Math.round(100 * bigCells[d][h] / c.n)}% of sales</b></div>` : ''}`;
       if (c.n < 3) body += `<div class="row"><span>too few sales to colour</span></div>`;
     }
     tip.innerHTML = body;
@@ -305,6 +440,82 @@ function attachHeatTooltip(stats, cells, overallMedian) {
     if (y + tip.offsetHeight > wrap.clientHeight) y = e.clientY - r.top - tip.offsetHeight - 14;
     tip.style.left = `${x}px`; tip.style.top = `${Math.max(0, y)}px`;
   }
+}
+
+// ---- battles section ---------------------------------------------------------
+function renderBattles(matched, hasFilter) {
+  const st = state.battleStatus || {};
+  const nBig = state.battles.filter(isBigBattle).length;
+  $('#battleStatus').textContent = st.lastError ? `Battle sync error: ${st.lastError}` : st.count ? `${st.count} battles cached · ${nBig} big at ≥ ${state.bigM} M` : 'no battle data yet';
+
+  const th = battleLoadThresholds();
+  const groups = { calm: [], normal: [], busy: [] };
+  for (const t of matched) groups[battleLevel(t)].push(t);
+  const all = matched.map(t => t.price).sort((a, b) => a - b);
+  const overall = all.length ? all[Math.floor(all.length / 2)] : 0;
+  const med = arr => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : null; };
+  const rows = [
+    [`Calm: ≤ ${th.p25} big battles active`, groups.calm, '<span class="bsym small">!</span>'],
+    [`Normal: ${th.p25 + 1}–${Math.max(th.p25 + 1, th.p75 - 1)} big battles`, groups.normal, `<span class="bsym" style="background:${mix([107, 110, 106], [230, 103, 103], 0.5)}">!</span>`],
+    [`Busy: ≥ ${th.p75} big battles active`, groups.busy, '<span class="bsym big">!</span>'],
+  ];
+  $('#battleTable tbody').innerHTML = rows.map(([label, list, sym]) => {
+    const m = med(list.map(t => t.price));
+    const ppp = med(list.map(pricePerPoint).filter(Number.isFinite));
+    const rel = m != null && overall ? m / overall - 1 : null;
+    return `<tr><td>${sym} ${label}</td><td class="num">${list.length}</td><td class="num">${matched.length ? Math.round(100 * list.length / matched.length) : 0}%</td>
+      <td class="num">${m != null ? fmtMoney(m) : '–'}</td><td class="num ${rel > 0 ? 'dear' : rel < 0 ? 'cheap' : ''}">${fmtPct(rel)}</td>
+      <td class="num">${list.length ? fmtMoney(Math.min(...list.map(t => t.price))) : '–'}</td><td class="num">${ppp != null ? fmtMoney(ppp) : '–'}</td></tr>`;
+  }).join('');
+
+  renderTimelines(matched);
+}
+
+/** Two stacked hourly charts: median sale price, and big battles active. */
+function renderTimelines(matched) {
+  const HOURS = Math.min(24 * (state.days || 14), 24 * 14);
+  const end = Math.ceil(Date.now() / 3_600_000) * 3_600_000;
+  const start = end - HOURS * 3_600_000;
+  const buckets = Array.from({ length: HOURS }, () => []);
+  for (const t of matched) {
+    const i = Math.floor((t.ts - start) / 3_600_000);
+    if (i >= 0 && i < HOURS) buckets[i].push(t.price);
+  }
+  const price = buckets.map((b, i) => {
+    const s = [...b].sort((a, c) => a - c);
+    return { x: start + i * 3_600_000, y: s.length ? s[Math.floor(s.length / 2)] : null, n: s.length };
+  });
+  const bigCount = Array.from({ length: HOURS }, (_, i) => {
+    const t = start + i * 3_600_000 + 1_800_000;
+    return { x: start + i * 3_600_000, y: state.battles.filter(b => isBigBattle(b) && b.start <= t && (b.end == null || b.end >= t)).length };
+  });
+
+  const css = getComputedStyle(document.documentElement);
+  const color = n => css.getPropertyValue(n).trim();
+  const grid = color('--border'), text = color('--text-2');
+  const xScale = { type: 'linear', min: start, max: end, grid: { color: grid }, ticks: { color: text, maxTicksLimit: 8, callback: v => new Date(v).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit' }) } };
+  const common = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } } };
+
+  if (!state.timelineCharts) {
+    state.timelineCharts = {
+      price: new Chart($('#priceTimeline'), {
+        type: 'line',
+        data: { datasets: [{ data: price, borderColor: color('--line-median'), borderWidth: 2, borderDash: [6, 4], pointRadius: 2, pointBackgroundColor: color('--line-median'), spanGaps: true }] },
+        options: { ...common, plugins: { ...common.plugins, tooltip: { callbacks: { title: i => fmtDate(i[0].raw.x), label: i => ` median ${fmtMoney(i.raw.y)} from ${i.raw.n} sale${i.raw.n === 1 ? '' : 's'}` } } },
+          scales: { x: xScale, y: { title: { display: true, text: 'Median price', color: text }, grid: { color: grid }, ticks: { color: text } } } },
+      }),
+      battles: new Chart($('#battleTimeline'), {
+        type: 'bar',
+        data: { datasets: [{ data: bigCount, backgroundColor: 'rgba(230,103,103,.55)', barPercentage: 1, categoryPercentage: 1 }] },
+        options: { ...common, plugins: { ...common.plugins, tooltip: { callbacks: { title: i => fmtDate(i[0].raw.x), label: i => ` ${i.raw.y} big battle${i.raw.y === 1 ? '' : 's'} active` } } },
+          scales: { x: xScale, y: { beginAtZero: true, title: { display: true, text: 'Big battles', color: text }, grid: { color: grid }, ticks: { color: text, precision: 0 } } } },
+      }),
+    };
+    return;
+  }
+  const { price: pc, battles: bc } = state.timelineCharts;
+  pc.data.datasets[0].data = price; Object.assign(pc.options.scales.x, { min: start, max: end }); pc.update();
+  bc.data.datasets[0].data = bigCount; Object.assign(bc.options.scales.x, { min: start, max: end }); bc.update();
 }
 
 function findCell(stats, target) {
@@ -415,7 +626,11 @@ function renderChart(period, matched, hasFilter) {
           filter: i => i.raw.t,
           callbacks: {
             title: items => items.map(i => fmtDate(i.raw.t.ts)).join(''),
-            label: i => ` ${fmtMoney(i.raw.y)} · ${statsText(i.raw.t)}`,
+            label: i => {
+              const lines = [` ${fmtMoney(i.raw.y)} · ${statsText(i.raw.t)}${isQuick(i.raw.t) ? ' · quick sale' : ''}`];
+              if (state.battlesOn) lines.push(` ${battleText(i.raw.t)}`);
+              return lines;
+            },
           },
         },
       },
@@ -462,9 +677,11 @@ function renderTable(matched, hasFilter) {
     ...(it.stats.length > 1 ? [{ key: 'pts', label: 'Points', num: true }] : []),
     { key: 'ppp', label: it.stats.length === 1 ? `Price / ${STAT_LABELS[primaryStat()].toLowerCase()}` : 'Price / point', num: true },
     { key: 'state', label: 'Condition', num: true },
+    ...(state.battlesOn ? [{ key: 'battle', label: 'Battle', num: true }] : []),
   ];
   const val = (t, key) => key === 'ppp' ? pricePerPoint(t)
     : key === 'pts' ? points(t)
+    : key === 'battle' ? t.big * 100 + t.small
     : key.startsWith('s:') ? (t.skills[key.slice(2)] ?? -Infinity) : t[key];
 
   const rows = [...matched].sort((a, b) => {
@@ -492,6 +709,8 @@ function renderTable(matched, hasFilter) {
       else if (c.key === 'price') text = fmtMoney(t.price);
       else if (c.key === 'ppp') text = Number.isFinite(v) ? fmtMoney(v) : '–';
       else if (c.key === 'pts') text = v.toFixed(1);
+      else if (c.key === 'battle') text = battleSymbol(t);
+      if (c.key === 'ts' && isQuick(t)) text += ' <span class="bsym quick" title="bought under ' + state.quickSecs + 's after listing">⚡</span>';
       else if (c.key === 'state') text = t.state != null ? `${t.state}/${t.maxState}` : '–';
       else text = Number.isFinite(v) ? v : '–';
       return `<td class="${c.num ? 'num' : ''}">${text}</td>`;
@@ -519,6 +738,19 @@ $('#heatScale').querySelectorAll('button').forEach(b => {
     render();
   };
 });
+$('#battleEnable').onclick = () => setBattlesOn(true);
+$('#battleDisable').onclick = () => setBattlesOn(false);
+$('#bigM').value = String(state.bigM);
+$('#bigM').onchange = e => {
+  const v = Number(e.target.value);
+  if (!(v > 0)) return;
+  state.bigM = v; localStorage.setItem('bigM', v);
+  tagBattles(state.txs); render();
+};
+$('#excludeQuick').checked = state.excludeQuick;
+$('#excludeQuick').onchange = e => { state.excludeQuick = e.target.checked; localStorage.setItem('excludeQuick', state.excludeQuick ? '1' : '0'); render(); };
+$('#quickSecs').value = String(state.quickSecs);
+$('#quickSecs').onchange = e => { state.quickSecs = Number(e.target.value); localStorage.setItem('quickSecs', state.quickSecs); render(); };
 $('#showAll').checked = state.showAll;
 $('#showAll').onchange = e => { state.showAll = e.target.checked; localStorage.setItem('showAll', state.showAll ? '1' : '0'); render(); };
 

@@ -13,8 +13,24 @@
     <h1>WarEra Market Helper</h1>
     <p class="sub">Recent item-market sales for weapons and equipment. Pick an item and rarity, enter the stats you want and see the best price paid.</p>
   </div>
-  <div class="status" id="status">loading…</div>
+  <div class="status-box">
+    <div class="status" id="status">loading…</div>
+    <button class="link" id="changeKey">API key ✓ · change</button>
+  </div>
 </header>
+
+<div class="overlay" id="keyOverlay" hidden>
+  <form class="panel key-panel" id="keyForm">
+    <h2>Your WarEra API key</h2>
+    <p class="muted">The app reads item-market transactions with your key. It is saved only in this browser (localStorage) and kept in the server's memory while it runs, never on disk. Get one in the game: Settings → API.</p>
+    <label class="field"><span>API key</span><input type="password" id="keyInput" placeholder="wae_…" autocomplete="off" spellcheck="false" required></label>
+    <div class="key-actions">
+      <label class="check"><input type="checkbox" id="keyShow"> show</label>
+      <button type="submit" class="btn" id="keySave">Save and continue</button>
+    </div>
+    <p class="err" id="keyError" hidden></p>
+  </form>
+</div>
 
 <main>
   <section class="panel controls">
@@ -38,6 +54,19 @@
           <option value="min" selected>stats ≥ my values</option>
           <option value="near">stats close to mine (±5%)</option>
         </select>
+      </label>
+      <label class="field">
+        <span>Quick sales</span>
+        <span class="inline">
+          <label class="check"><input type="checkbox" id="excludeQuick" checked> exclude sold within</label>
+          <select id="quickSecs">
+            <option value="30">30 s</option>
+            <option value="60" selected>1 min</option>
+            <option value="120">2 min</option>
+            <option value="300">5 min</option>
+          </select>
+        </span>
+        <span class="hint" id="quickHint"></span>
       </label>
     </div>
     <div class="formula" id="formula"></div>
@@ -72,6 +101,37 @@
     <p class="muted" id="heatSummary"></p>
     <div class="heat-wrap"><div class="heat" id="heat"></div><div class="heat-tip" id="heatTip" hidden></div></div>
     <p class="muted" id="heatNote"></p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Battles and prices</h2>
+      <span class="muted" id="battleStatus"></span>
+    </div>
+    <div id="battleOff">
+      <p class="muted">Optional: tag every sale with the battles that were running at that moment and compare prices in calm vs. busy times. Loads the battle history and adds a column to the table and a line to the tooltips. Nothing is fetched until you turn it on.</p>
+      <button class="btn" id="battleEnable">Load battle data</button>
+    </div>
+    <div id="battleOn" hidden>
+    <div class="filters" style="margin-bottom:10px">
+      <label class="field">
+        <span>Big battle threshold</span>
+        <span class="inline">round damage ≥ <input type="number" id="bigM" min="1" step="5" style="min-width:80px;width:90px"> M</span>
+        <span class="hint">attacker + defender damage in the battle's biggest round; small battles end around 10–20 M</span>
+      </label>
+    </div>
+    <p class="muted">Each sale is tagged with the battles that were active at that moment. The <span class="bsym small">!</span> symbol turns from grey (calm, few big battles running) to <span class="bsym big">!</span> red (the busiest moments seen). A battle counts as big when its biggest round reached the damage threshold above. Buckets use the quartiles of "big battles active" across this item's sales. The charts above are unchanged; this section only adds the comparison.</p>
+    <div class="table-wrap">
+      <table id="battleTable" class="compact">
+        <thead><tr><th>Situation at sale time</th><th class="num">Sales</th><th class="num">Share</th><th class="num">Median price</th><th class="num">vs. overall</th><th class="num">Lowest</th><th class="num">Median price / point</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="panel-head" style="margin-top:14px"><h2 class="sub-h">Last days, hour by hour</h2><span class="legend"><i class="line median"></i> median price per hour <i class="bar-legend"></i> big battles active</span></div>
+    <div class="chart-wrap short"><canvas id="priceTimeline"></canvas></div>
+    <div class="chart-wrap shorter"><canvas id="battleTimeline"></canvas></div>
+    <p class="muted" style="margin:8px 0 0"><button class="link" id="battleDisable">Turn battle analysis off</button></p>
+    </div>
   </section>
 
   <section class="panel">
