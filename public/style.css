@@ -53,15 +53,20 @@ h2 { margin: 0; font-size: 15px; font-weight: 600; }
 .rarities .item-btn.legendary { --r: var(--r-legendary); }
 .rarities .item-btn.mythic { --r: var(--r-mythic); }
 
-.filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
-.stat-inputs { display: flex; gap: 12px; flex-wrap: wrap; }
+.filters { display: flex; gap: 12px 16px; flex-wrap: wrap; align-items: flex-start; }
+.stat-inputs { display: contents; }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
-.field input, .field select {
+.field > span:first-child { height: 16px; line-height: 16px; white-space: nowrap; }
+.field input:not([type="checkbox"]):not([type="range"]), .field select {
   background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px;
-  padding: 7px 9px; font: inherit; min-width: 140px;
+  padding: 0 9px; height: 34px; font: inherit; min-width: 140px; box-sizing: border-box;
 }
+.field select { padding-right: 28px; }
 .field input:focus, .field select:focus { outline: 1px solid var(--series-1); }
-.field .hint { color: var(--muted); font-size: 11px; }
+.field .hint { color: var(--muted); font-size: 11px; min-height: 14px; line-height: 14px; white-space: nowrap; }
+.field .inline { display: flex; gap: 8px; align-items: center; height: 34px; }
+.field .inline select, .field .inline input:not([type="checkbox"]) { min-width: 0; }
+.field input[type="checkbox"] { width: 14px; height: 14px; margin: 0; accent-color: var(--series-2); }
 .formula:not(:empty) { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .field.weight input[type="range"] { min-width: 0; width: 260px; padding: 0; accent-color: var(--series-2); }
 
@@ -135,9 +140,7 @@ tr.best td:first-child::before { content: "★ "; }
 .bsym.small { background: #6b6e6a; }
 .bsym.big { background: var(--r-mythic); }
 .bsym.quick { background: transparent; color: var(--muted); border: 1px solid var(--border); font-weight: 500; }
-.field .inline { display: flex; gap: 8px; align-items: center; }
-.field .inline select { min-width: 0; }
-.field .check { color: var(--text); }
+.field .check { color: var(--text); white-space: nowrap; }
 .chart-wrap.short { height: 200px; }
 .chart-wrap.shorter { height: 120px; margin-top: 6px; }
 .sub-h { font-size: 13px; color: var(--text-2); }
@@ -161,4 +164,4 @@ button.link:hover { color: var(--text); }
 .heat-tip .brow { gap: 20px; }
 .heat-tip .brow .muted { font-size: 11px; }
 .heat-tip .brow .bsym { min-width: 14px; height: 14px; line-height: 14px; font-size: 10px; margin-right: 2px; }
-tbody .bsym:not(.quick) { cursor: help; }
+tbody .bsym { cursor: help; }

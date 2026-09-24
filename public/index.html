@@ -47,6 +47,7 @@
           <option value="14">last 14 days</option>
           <option value="0">all history</option>
         </select>
+        <span class="hint">sales considered</span>
       </label>
       <label class="field">
         <span>Match</span>
@@ -54,8 +55,9 @@
           <option value="min" selected>stats ≥ my values</option>
           <option value="near">stats close to mine (±5%)</option>
         </select>
+        <span class="hint">how stats are compared</span>
       </label>
-      <label class="field">
+      <div class="field">
         <span>Quick sales</span>
         <span class="inline">
           <label class="check"><input type="checkbox" id="excludeQuick" checked> exclude sold within</label>
@@ -67,7 +69,7 @@
           </select>
         </span>
         <span class="hint" id="quickHint"></span>
-      </label>
+      </div>
     </div>
     <div class="formula" id="formula"></div>
   </section>
@@ -114,11 +116,11 @@
     </div>
     <div id="battleOn" hidden>
     <div class="filters" style="margin-bottom:10px">
-      <label class="field">
+      <div class="field">
         <span>Big battle threshold</span>
-        <span class="inline">round damage ≥ <input type="number" id="bigM" min="1" step="5" style="min-width:80px;width:90px"> M</span>
+        <span class="inline">round damage ≥ <input type="number" id="bigM" min="1" step="5" style="width:90px"> M</span>
         <span class="hint">attacker + defender damage in the battle's biggest round; small battles end around 10–20 M</span>
-      </label>
+      </div>
     </div>
     <p class="muted">Each sale is tagged with the battles that were active at that moment. The <span class="bsym small">!</span> symbol turns from grey (calm, few big battles running) to <span class="bsym big">!</span> red (the busiest moments seen). A battle counts as big when its biggest round reached the damage threshold above. Buckets use the quartiles of "big battles active" across this item's sales. The charts above are unchanged; this section only adds the comparison.</p>
     <div class="table-wrap">

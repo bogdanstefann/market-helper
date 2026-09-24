@@ -202,13 +202,23 @@ function battleListHtml(ts, limit = 10) {
 function attachBattleTooltip() {
   const tbody = $('#table tbody'), tip = $('#battleTip');
   tbody.onmouseover = e => {
-    const sym = e.target.closest('.bsym:not(.quick)');
-    if (!sym || !state.battlesOn) return;
+    const sym = e.target.closest('.bsym');
+    if (!sym) return;
     const tr = sym.closest('tr');
-    const ts = Number(tr?.dataset.ts);
-    if (!ts) return;
-    const t = state.txs.find(x => x.ts === ts && x.id === tr.dataset.id) || { big: 0, small: 0 };
-    tip.innerHTML = `<div class="t">${fmtDate(ts)} · ${battleText(t)}</div>${battleListHtml(ts)}`;
+    const t = state.txs.find(x => x.id === tr?.dataset.id);
+    if (!t) return;
+    if (sym.classList.contains('quick')) {
+      const secs = Math.max(0, Math.round((t.ts - t.offerTs) / 1000));
+      const delay = secs < 60 ? `${secs} s` : `${Math.floor(secs / 60)} min ${secs % 60} s`;
+      tip.innerHTML = `<div class="t">⚡ Quick sale</div>
+        <div class="row"><span>Listed</span><b>${fmtDate(t.offerTs)}</b></div>
+        <div class="row"><span>Bought</span><b>${fmtDate(t.ts)}</b></div>
+        <div class="row"><span>Time on the market</span><b>${delay}</b></div>
+        <div class="row" style="max-width:300px;white-space:normal;margin-top:4px"><span>Bought within ${state.quickSecs} s of listing, so it was probably a pre-arranged deal between two players rather than an open market price. These sales are hidden when "exclude sold within" is ticked.</span></div>`;
+    } else {
+      if (!state.battlesOn) return;
+      tip.innerHTML = `<div class="t">${fmtDate(t.ts)} · ${battleText(t)}</div>${battleListHtml(t.ts)}`;
+    }
     tip.hidden = false;
     place(e);
   };
@@ -347,8 +357,8 @@ function render() {
   const base = baseTxs();
   const quickCount = state.txs.length - base.length;
   $('#quickHint').textContent = state.excludeQuick
-    ? `${quickCount} of ${state.txs.length} cached sales excluded (bought under ${state.quickSecs}s after listing)`
-    : `${state.txs.filter(isQuick).length} quick sales included`;
+    ? `${quickCount} of ${state.txs.length} excluded (< ${state.quickSecs} s on the market)`
+    : `${state.txs.filter(isQuick).length} quick sales included, marked ⚡`;
   const period = base.filter(inPeriod);
   const matched = period.filter(matches);
   const hasFilter = Object.keys(state.minStats).length > 0;
@@ -762,7 +772,7 @@ function renderTable(matched, hasFilter) {
       else if (c.key === 'battle') text = battleSymbol(t);
       else if (c.key === 'state') text = t.state != null ? `${t.state}/${t.maxState}` : '–';
       else text = Number.isFinite(v) ? v : '–';
-      if (c.key === 'ts' && isQuick(t)) text += ' <span class="bsym quick" title="bought under ' + state.quickSecs + 's after listing">⚡</span>';
+      if (c.key === 'ts' && isQuick(t)) text += ' <span class="bsym quick">⚡</span>';
       return `<td class="${c.num ? 'num' : ''}">${text}</td>`;
     }).join('')}</tr>`).join('');
   }
