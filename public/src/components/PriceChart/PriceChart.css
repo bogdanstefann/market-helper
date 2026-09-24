@@ -9,3 +9,9 @@
 @media (max-width: 600px) { .chart-wrap { height: 260px; } }
 .ramp-legend { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; }
 .ramp { display: inline-block; width: 60px; height: 8px; border-radius: 4px; }
+.chart-opts { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.chart-opts .check { gap: 5px; }
+.chart-opts .line, .chart-opts .dot { margin-left: 0; }
+.chart-note { margin: 6px 0 0; }
+.chart-note .dot:first-child { margin-left: 0; }
+.ramp-legend { margin-left: 4px; }

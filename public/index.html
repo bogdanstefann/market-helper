@@ -95,10 +95,16 @@
   <section class="panel">
     <div class="panel-head">
       <h2 id="chartTitle">Price vs. stat</h2>
-      <span class="legend"><i class="line floor"></i> lowest price <span id="legendMedian"><i class="line median"></i> median price </span><i class="dot match"></i> match the filter <i class="dot other" id="legendOther"></i><span id="legendOtherText"> other sales</span> <span id="legendSize"></span></span>
-      <label class="check"><input type="checkbox" id="showAll" checked> Show all sales on chart</label>
+      <div class="chart-opts" id="chartOpts">
+        <label class="check"><input type="checkbox" data-opt="floor"> <i class="line floor"></i> lowest price</label>
+        <label class="check"><input type="checkbox" data-opt="median"> <i class="line median"></i> median price</label>
+        <label class="check" id="optLevels"><input type="checkbox" data-opt="levels"> lines per <span class="opt-stat2">stat</span></label>
+        <label class="check" id="optColor"><input type="checkbox" data-opt="colorBy"> colour by <span class="opt-stat2">stat</span> <span id="legendSize"></span></label>
+        <label class="check"><input type="checkbox" id="showAll" checked> all sales</label>
+      </div>
     </div>
     <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <p class="muted chart-note"><i class="dot match"></i> match the filter <i class="dot other" id="legendOther"></i><span id="legendOtherText"> other sales</span></p>
   </section>
 
   <section class="panel">

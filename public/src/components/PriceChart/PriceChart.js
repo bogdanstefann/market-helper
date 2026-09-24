@@ -11,6 +11,10 @@ export function init(handlers) {
   onChange = handlers.onChange;
   $('#showAll').checked = state.showAll;
   $('#showAll').onchange = e => { setting('showAll', e.target.checked ? '1' : '0'); state.showAll = e.target.checked; onChange(); };
+  $('#chartOpts').querySelectorAll('input[data-opt]').forEach(cb => {
+    cb.checked = !!state.chartOpts[cb.dataset.opt];
+    cb.onchange = () => { state.chartOpts[cb.dataset.opt] = cb.checked; setting('chartOpts', state.chartOpts); onChange(); };
+  });
 }
 
 /**
@@ -38,9 +42,7 @@ function levelLines(matched, primary, scale) {
     if (list.length < 3) continue;
     const { median } = aggregateByStat(list, primary, 2);
     const data = median.map(pt => ({ ...pt, level: v, n: list.length }));
-    // dark underlay first, so the coloured line stands out from the dots behind it
-    lines.push({ type: 'line', label: `${statLabel(scale.key)} ${v}`, data, borderColor: 'rgba(0,0,0,.7)', borderWidth: 6, pointRadius: 0, pointHitRadius: 0, tension: 0.3, order: 4, underlay: true });
-    lines.push({ type: 'line', label: `${statLabel(scale.key)} ${v}`, data, borderColor: scale.colorAt(v), borderWidth: 2.5, pointRadius: 0, pointHitRadius: 8, tension: 0.3, order: 5, level: v });
+    lines.push({ type: 'line', label: `${statLabel(scale.key)} ${v}`, data, borderColor: scale.colorAt(v), borderWidth: 1.5, pointRadius: 0, pointHitRadius: 8, tension: 0.3, order: 1, level: v });
   }
   return lines;
 }
@@ -52,7 +54,7 @@ function endLabelsPlugin() {
     afterDatasetsDraw(c) {
       const { ctx, chartArea } = c;
       ctx.save();
-      ctx.font = 'bold 11px sans-serif';
+      ctx.font = '11px sans-serif';
       ctx.textBaseline = 'middle';
       const used = [];
       c.data.datasets.forEach((ds, i) => {
@@ -63,12 +65,9 @@ function endLabelsPlugin() {
         let y = last.y;
         for (const u of used) if (Math.abs(u - y) < 12) y = u + 12; // nudge overlapping labels apart
         used.push(y);
-        const x = Math.min(last.x + 6, chartArea.right + 2);
-        ctx.fillStyle = 'rgba(0,0,0,.75)';
-        const w = ctx.measureText(String(ds.level)).width + 8;
-        ctx.fillRect(x - 1, y - 8, w, 16);
+        const x = Math.min(last.x + 6, chartArea.right + 4);
         ctx.fillStyle = ds.borderColor;
-        ctx.fillText(String(ds.level), x + 3, y);
+        ctx.fillText(String(ds.level), x, y);
       });
       ctx.restore();
     },
@@ -77,12 +76,16 @@ function endLabelsPlugin() {
 
 export function render({ period, matched, hasFilter }) {
   const key = primaryStat();
-  const scale = colorScale();
+  const opts = state.chartOpts;
+  const twoStat = colorScale();
+  const scale = twoStat && opts.colorBy ? twoStat : null;
+  const levels = twoStat && opts.levels ? twoStat : null;
   $('#chartTitle').textContent = `Price vs. ${statLabel(key)}`;
+  $('#optLevels').hidden = $('#optColor').hidden = !twoStat;
+  if (twoStat) document.querySelectorAll('.opt-stat2').forEach(el => { el.textContent = statLabel(twoStat.key).toLowerCase(); });
   $('#legendSize').innerHTML = scale
-    ? `<span class="ramp-legend">${statLabel(scale.key).toLowerCase()} ${scale.lo} <i class="ramp" style="background:linear-gradient(90deg, ${mix(LIGHT, DARK, 0)}, ${mix(LIGHT, DARK, 1)})"></i> ${scale.hi} · lines = median per ${statLabel(scale.key).toLowerCase()}</span>`
+    ? `<span class="ramp-legend">${scale.lo} <i class="ramp" style="background:linear-gradient(90deg, ${mix(LIGHT, DARK, 0)}, ${mix(LIGHT, DARK, 1)})"></i> ${scale.hi}</span>`
     : '';
-  $('#legendMedian').style.display = scale ? 'none' : '';
   const matchedIds = new Set(matched.map(t => t.id));
   const pt = t => ({ x: t.skills[key] ?? 0, y: t.price, t });
   const showAll = state.showAll || !hasFilter;
@@ -92,13 +95,12 @@ export function render({ period, matched, hasFilter }) {
   $('#legendOther').style.display = $('#legendOtherText').style.display = showAll ? '' : 'none';
 
   const datasets = [
-    { type: 'line', label: 'Lowest price', data: floor, borderColor: cssVar('--line-floor'), borderWidth: 2, pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 0 },
-    ...(scale
-      ? levelLines(matched, key, scale)
-      : [{ type: 'line', label: 'Median price', data: median, borderColor: cssVar('--line-median'), borderWidth: 2, borderDash: [6, 4], pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 1 }]),
+    ...(opts.floor ? [{ type: 'line', label: 'Lowest price', data: floor, borderColor: cssVar('--line-floor'), borderWidth: 2, pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 0 }] : []),
+    ...(opts.median ? [{ type: 'line', label: 'Median price', data: median, borderColor: cssVar('--line-median'), borderWidth: 2, borderDash: [6, 4], pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 1 }] : []),
+    ...(levels ? levelLines(matched, key, levels) : []),
     { type: 'scatter', label: hasFilter ? 'Match the filter' : 'Sales', data: hits,
-      backgroundColor: scale ? (ctx => ctx.raw ? scale.color(ctx.raw.t).replace('rgb(', 'rgba(').replace(')', ',.55)') : cssVar('--series-2')) : hexA(cssVar(hasFilter ? '--series-2' : '--series-1'), 0.85),
-      pointRadius: scale ? 3 : hasFilter ? 5 : 3.5, pointHoverRadius: 8, order: 2 },
+      backgroundColor: scale ? (ctx => ctx.raw ? scale.color(ctx.raw.t) : cssVar('--series-2')) : hexA(cssVar(hasFilter ? '--series-2' : '--series-1'), 0.85),
+      pointRadius: hasFilter ? 4.5 : 3.5, pointHoverRadius: 8, order: 2 },
     { type: 'scatter', label: 'Other sales', data: others, backgroundColor: hexA(cssVar('--series-1'), 0.22), pointRadius: 2.5, pointHoverRadius: 6, order: 3 },
   ];
   const target = state.minStats[key];
@@ -115,13 +117,13 @@ export function render({ period, matched, hasFilter }) {
     plugins: [targetLinePlugin(), endLabelsPlugin()],
     options: {
       responsive: true, maintainAspectRatio: false, animation: false,
-      layout: { padding: { top: 14, right: 28 } },
+      layout: { padding: { top: 14, right: 22 } },
       interaction: { mode: 'nearest', intersect: true },
       plugins: {
         legend: { display: false },
         targetLine: { x: target },
         tooltip: {
-          filter: i => (i.raw.t || i.raw.level != null) && !i.dataset.underlay,
+          filter: i => i.raw.t || i.raw.level != null,
           callbacks: {
             title: items => items.map(i => i.raw.t ? fmtDate(i.raw.t.ts) : `${statLabel(key)} ${i.raw.x}`).join(''),
             label: i => {

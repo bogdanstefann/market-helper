@@ -22,6 +22,7 @@ export const state = {
   quickSecs: Number(store.get('quickSecs', 60)) || 60,
   bigM: Number(store.get('bigM', 20)) || 20,
   battlesOn: store.get('battlesOn', '0') === '1',
+  chartOpts: { floor: true, median: true, levels: false, colorBy: true, ...JSON.parse(store.get('chartOpts', '{}') || '{}') },
   // data
   txs: [], counts: {}, battles: [], countries: {},
   // table sort
