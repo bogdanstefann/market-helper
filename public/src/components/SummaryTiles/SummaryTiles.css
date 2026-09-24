@@ -1,0 +1,8 @@
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.tile .k { font-size: 12px; color: var(--text-2); }
+.tile .v { font-size: 24px; font-weight: 600; margin-top: 2px; }
+.tile .d { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.tile.best { border-color: var(--good); }
+.tile.best .v { color: var(--good); }
+@media (max-width: 600px) { .tile .v { font-size: 20px; } }

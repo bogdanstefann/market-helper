@@ -1,0 +1,15 @@
+.items { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.item-btn {
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; display: flex; gap: 8px; align-items: center;
+}
+.item-btn .count { color: var(--muted); font-size: 12px; }
+.item-btn.active { border-color: var(--r, var(--series-1)); background: color-mix(in srgb, var(--r, var(--series-1)) 14%, transparent); }
+.item-btn .tag { width: 8px; height: 8px; border-radius: 50%; background: var(--r, var(--text-2)); display: inline-block; }
+.rarities .item-btn { padding: 6px 10px; font-size: 13px; }
+.rarities .item-btn.common { --r: var(--r-common); }
+.rarities .item-btn.uncommon { --r: var(--r-uncommon); }
+.rarities .item-btn.rare { --r: var(--r-rare); }
+.rarities .item-btn.epic { --r: var(--r-epic); }
+.rarities .item-btn.legendary { --r: var(--r-legendary); }
+.rarities .item-btn.mythic { --r: var(--r-mythic); }

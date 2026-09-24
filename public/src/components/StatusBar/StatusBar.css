@@ -1,0 +1,2 @@
+.status { font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+.status.err { color: var(--r-mythic); }

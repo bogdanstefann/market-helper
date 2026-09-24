@@ -1,0 +1,13 @@
+.bsym { display: inline-block; min-width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 4px; font-weight: 700; font-size: 11px; color: #fff; background: var(--r-common); }
+.bsym.small { background: #6b6e6a; }
+.bsym.big { background: var(--r-mythic); }
+.bsym.quick { background: transparent; color: var(--muted); border: 1px solid var(--border); font-weight: 500; }
+.chart-wrap.short { height: 200px; }
+.chart-wrap.shorter { height: 120px; margin-top: 6px; }
+.sub-h { font-size: 13px; color: var(--text-2); }
+.bar-legend { display: inline-block; width: 18px; height: 10px; background: rgba(230,103,103,.55); border-radius: 2px; margin: 0 4px 0 10px; vertical-align: middle; }
+table.compact td, table.compact th { padding: 6px 8px; }
+.battle-tip { position: fixed; max-width: 420px; }
+.heat-tip .brow { gap: 20px; }
+.heat-tip .brow .muted { font-size: 11px; }
+.heat-tip .brow .bsym { min-width: 14px; height: 14px; line-height: 14px; font-size: 10px; margin-right: 2px; }

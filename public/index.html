@@ -4,7 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WarEra Market Helper</title>
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./src/components/StatusBar/StatusBar.css">
+<link rel="stylesheet" href="./src/components/ApiKey/ApiKey.css">
+<link rel="stylesheet" href="./src/components/ItemSelector/ItemSelector.css">
+<link rel="stylesheet" href="./src/components/Filters/Filters.css">
+<link rel="stylesheet" href="./src/components/SummaryTiles/SummaryTiles.css">
+<link rel="stylesheet" href="./src/components/PriceChart/PriceChart.css">
+<link rel="stylesheet" href="./src/components/Heatmap/Heatmap.css">
+<link rel="stylesheet" href="./src/components/Battles/Battles.css">
+<link rel="stylesheet" href="./src/components/SalesTable/SalesTable.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -22,7 +31,7 @@
 <div class="overlay" id="keyOverlay" hidden>
   <form class="panel key-panel" id="keyForm">
     <h2>Your WarEra API key</h2>
-    <p class="muted">The app reads item-market transactions with your key. It is saved only in this browser (localStorage) and kept in the server's memory while it runs, never on disk. Get one in the game: Settings → API.</p>
+    <p class="muted">The page calls the WarEra API directly from your browser with your key, and caches the answers here. The key is saved only in this browser (localStorage); there is no server behind this page. Get one in the game: Settings → API.</p>
     <label class="field"><span>API key</span><input type="password" id="keyInput" placeholder="wae_…" autocomplete="off" spellcheck="false" required></label>
     <div class="key-actions">
       <label class="check"><input type="checkbox" id="keyShow"> show</label>
@@ -150,6 +159,6 @@
   </section>
 </main>
 <div class="heat-tip battle-tip" id="battleTip" hidden></div>
-<script src="/app.js"></script>
+<script type="module" src="./src/main.js"></script>
 </body>
 </html>

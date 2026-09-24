@@ -1,7 +1,7 @@
 {
   "name": "warera-market-helper",
-  "version": "1.0.0",
-  "description": "Tracks mythic item prices on the WarEra item market",
+  "version": "2.0.0",
+  "description": "Tracks WarEra item-market sales in the browser and finds the best price for the stats you want",
   "type": "module",
   "scripts": {
     "start": "node server.js"

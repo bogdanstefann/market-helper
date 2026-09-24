@@ -1,0 +1,19 @@
+.filters { display: flex; gap: 12px 16px; flex-wrap: wrap; align-items: flex-start; }
+.stat-inputs { display: contents; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+.field > span:first-child { height: 16px; line-height: 16px; white-space: nowrap; }
+.field input:not([type="checkbox"]):not([type="range"]), .field select {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px;
+  padding: 0 9px; height: 34px; font: inherit; min-width: 140px; box-sizing: border-box;
+}
+.field select { padding-right: 28px; }
+.field input:focus, .field select:focus { outline: 1px solid var(--series-1); }
+.field .hint { color: var(--muted); font-size: 11px; min-height: 14px; line-height: 14px; white-space: nowrap; }
+.field .inline { display: flex; gap: 8px; align-items: center; height: 34px; }
+.field .inline select, .field .inline input:not([type="checkbox"]) { min-width: 0; }
+.field input[type="checkbox"] { width: 14px; height: 14px; margin: 0; accent-color: var(--series-2); }
+.field .check { color: var(--text); white-space: nowrap; }
+.field.weight input[type="range"] { min-width: 0; width: 260px; padding: 0; accent-color: var(--series-2); }
+.formula:not(:empty) { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.check { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.check input { accent-color: var(--series-2); margin: 0; }

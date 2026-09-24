@@ -1,0 +1,38 @@
+/* Design tokens, page layout and the shared panel/field primitives. Component styles live next to each component. */
+:root {
+  color-scheme: dark;
+  --bg: #121417;
+  --surface: #1a1d21;
+  --surface-2: #22262b;
+  --border: #2e333a;
+  --text: #f1f1ee;
+  --text-2: #b8b9b3;
+  --muted: #7f817c;
+  --r-common: #a3a8ad;
+  --r-uncommon: #4cbb5f;
+  --r-rare: #4c8fe8;
+  --r-epic: #b06ff0;
+  --r-legendary: #f0a53a;
+  --r-mythic: #e66767;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --good: #1baf7a;
+  --line-floor: #199e70;
+  --line-median: #c3c2b7;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; display: grid; gap: 16px; }
+.top { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+h1 { margin: 0 0 4px; font-size: 22px; }
+h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.sub { margin: 0; color: var(--text-2); max-width: 640px; }
+.muted { color: var(--muted); font-size: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.btn { background: var(--series-1); color: #fff; border: 0; border-radius: 8px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+.btn:disabled { opacity: .6; cursor: default; }

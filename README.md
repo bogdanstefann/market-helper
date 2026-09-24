@@ -1,56 +1,81 @@
-# WarEra Mythic Market Helper
+# WarEra Market Helper
 
 Tracks item-market sales of WarEra weapons and equipment (all six slots, all
 six rarities from common to mythic) and tells you the best price paid for an
 item with the stats you want.
 
-## Run
+It is a static page: the browser calls the WarEra API directly with your own
+API key and caches the answers in IndexedDB. There is no backend, so it can be
+hosted anywhere (Netlify, GitHub Pages, a folder).
+
+## Run locally
 
 ```bash
-npm start
-# http://localhost:3777
+npm start          # tiny static server on http://localhost:3777
 ```
 
-Requires Node 20+. No npm dependencies. On first visit the page asks for your
-WarEra API key (game: Settings → API). It is saved in the browser's
-localStorage and registered with the server, which keeps it in memory only.
-The server polls the WarEra API with the keys of the people who opened the page,
-rotating between them. `WARERA_API_KEY` in `.env` is an optional seed key so
-the server can sync before anyone opens the page.
+Any static server works (`npx serve public`, `python3 -m http.server -d public`).
+Deploying to Netlify needs no build: `netlify.toml` publishes `public/`.
 
-## How it works
+On first visit the page asks for your WarEra API key (game: Settings → API).
+It is saved in the browser's localStorage only.
 
-- The server reads `transaction.getPaginatedTransactions` (type `itemMarket`)
-  with the `x-api-key` header for each of the 36 item codes, every 60 s. The first
-  start backfills up to 14 days or 1000 sales per item; the cache lives in
-  `data/transactions.json`. Battles (`battle.getBattles`) are cached the same
-  way in `data/battles.json`, with the damage of each round.
-- Quick sales: a sale bought within N seconds of being listed (default 1 min,
-  configurable) is treated as a pre-arranged deal and excluded by default.
-  Untick the checkbox to include them; they carry a ⚡ mark in the table.
-- Battle analysis is opt-in ("Load battle data"). Each sale is tagged with the
-  battles active at that moment; a battle is "big" when its biggest round
-  reached the configurable damage threshold (default 20 M attacker + defender).
-  The table gets a `!` symbol coloured from grey (calm) to red (busiest moments),
-  tooltips get a battle line, hovering a symbol lists the battles that were
-  running (attacker → defender, type, biggest round damage), and a section compares calm / normal / busy sales
-  with two hourly timelines (median price, big battles active). The existing
-  charts are not changed.
-- The UI: pick a slot and a rarity, enter the stats you want (minimum, or ±5%),
+## Project layout
+
+```
+public/
+  index.html                 page skeleton (all sections and ids)
+  styles/base.css            design tokens, layout, panel/field primitives
+  src/
+    main.js                  entry: data flow, sync every 60 s, render()
+    config/items.js          slots × rarities, item codes, stat ranges
+    services/
+      api.js                 WarEra tRPC calls, key validation
+      cache.js               IndexedDB key/value store
+      market.js              item-market sales: sync + cache per item
+      battles.js             battles (with per-round damage) and countries
+    store/state.js           shared state, persisted settings, item helpers
+    lib/
+      analysis.js            pure logic: filters, points, aggregation, battles
+      format.js              formatting helpers, stat labels
+      colors.js              colour ramps
+    components/<Name>/       one folder per UI piece: <Name>.js + <Name>.css
+      ApiKey, StatusBar, ItemSelector, Filters, SummaryTiles,
+      PriceChart, Heatmap, Battles, SalesTable
+```
+
+Components export `init(handlers)` (bind DOM events once) and `render(view)`.
+They never call each other; they call back into `main.js`, which recomputes
+the view (`lib/analysis.js → currentView()`) and re-renders everything.
+
+## Features
+
+- Pick a slot and a rarity, enter the stats you want (minimum, or ±5%),
   choose a period, and see the lowest price, median, last sale, best price per
-  stat point, a price-vs-stat chart (lowest and median price lines over the
-  sales) and a table of matching sales.
-- "When do sales happen?" is a weekday × hour heatmap (local time) over all
-  cached sales of the selected item, switchable between sales count and median
-  price relative to the overall median, with a summary of the busiest and
-  cheapest slots.
-- "Price / point" divides the sale price by the primary stat only: attack for
-  weapons (critical chance is used as a filter, not in the ratio), and the
-  single stat for equipment.
+  point, a price-vs-stat chart (lowest and median price lines over the sales)
+  and a sortable table of matching sales.
+- "Price / point": for equipment, price divided by the single stat. For
+  weapons, a weighted score with a slider (default attack 40% / critical
+  chance 60%), each stat normalised to its maximum possible value.
+- Quick sales: a sale bought within N seconds of being listed (default 1 min)
+  is treated as a pre-arranged deal and excluded by default; ⚡ marks them
+  when included.
+- "When do sales happen?": weekday × hour heatmap (local time) over all cached
+  sales of the item, switchable between sales count and median price relative
+  to the overall median, with a P50/P90/P99 colour-scale cap.
+- Battle analysis (opt-in, "Load battle data"): each sale is tagged with the
+  battles active at that moment; a battle is "big" when its biggest round
+  reached the configurable damage threshold (default 20 M). The table gets a
+  `!` symbol from grey (calm) to red (busiest), hovering it lists the battles,
+  and a section compares calm / normal / busy sales with two hourly timelines.
 
-## Limitations
+## Data and limits
 
-- **Live offers** (`itemOffer.getItemOffers`) are not accessible with an API
-  token (the API answers 403 "API tokens cannot access this endpoint"). The app
-  works with completed sales, not with the offers currently listed.
-- API rate limit: 500 requests/minute; the app uses about 36/minute.
+- Sales come from `transaction.getPaginatedTransactions` (type `itemMarket`),
+  the first load of an item walks back up to 14 days or 1000 sales; later
+  loads fetch only what is new. Battles from `battle.getBattles`, countries
+  from `country.getAllCountries`.
+- Live offers (`itemOffer.getItemOffers`) are not accessible with an API token
+  (403), so the app works with completed sales, not current listings.
+- WarEra rate limit: 500 requests/minute per key. A first load of an item
+  costs up to 10 requests, of battles up to 15.

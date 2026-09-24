@@ -1,4 +1,3 @@
 node_modules/
-data/
-.env
+.netlify/
 .DS_Store
