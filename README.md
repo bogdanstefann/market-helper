@@ -75,7 +75,8 @@ the view (`lib/analysis.js → currentView()`) and re-renders everything.
   The first load of an item fetches the newest 1000 sales so the page shows up
   fast, then every minute it fetches what is new (no cap, so a closed tab does
   not leave gaps) and 5 more pages of older sales, until the full 14-day
-  window is cached. The header shows the progress. Battles come from
+  window is cached (every 3 s while catching up, then once a minute). A single
+  status strip above the tiles shows the progress; nothing else moves. Battles come from
   `battle.getBattles`, countries from `country.getAllCountries`.
 - Live offers (`itemOffer.getItemOffers`) are not accessible with an API token
   (403), so the app works with completed sales, not current listings.

@@ -23,7 +23,6 @@
     <p class="sub">Recent item-market sales for weapons and equipment. Pick an item and rarity, enter the stats you want and see the best price paid.</p>
   </div>
   <div class="status-box">
-    <div class="status" id="status">loading…</div>
     <button class="link" id="changeKey">API key ✓ · change</button>
   </div>
 </header>
@@ -82,10 +81,13 @@
     <div class="formula" id="formula"></div>
   </section>
 
-  <div class="history-banner" id="historyBanner" hidden>
-    <div class="hb-row"><span class="hb-spin"></span><span id="historyText"></span><span class="hb-pct" id="historyPct"></span></div>
-    <div class="hb-bar"><div class="hb-fill" id="historyFill"></div></div>
-    <p class="muted hb-note">Older sales are still being fetched, a few pages every few seconds. Numbers, charts and the heatmap fill in as they arrive.</p>
+  <div class="sync-strip" id="syncStrip" data-state="idle">
+    <div class="ss-row">
+      <span class="ss-icon" aria-hidden="true"></span>
+      <span class="ss-text" id="syncText">Loading…</span>
+      <span class="ss-meta" id="syncMeta"></span>
+    </div>
+    <div class="ss-bar"><div class="ss-fill" id="syncFill"></div></div>
   </div>
 
   <section class="tiles" id="tiles"></section>

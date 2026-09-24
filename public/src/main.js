@@ -8,7 +8,6 @@ import { ApiKeyError } from './services/api.js';
 import { getTransactions, syncItem, cachedCounts, historyStatus } from './services/market.js';
 import { getBattles, syncBattles, getCountries } from './services/battles.js';
 import { currentView, matches, tagBattles } from './lib/analysis.js';
-import { fmtDate } from './lib/format.js';
 import * as ApiKey from './components/ApiKey/ApiKey.js';
 import * as StatusBar from './components/StatusBar/StatusBar.js';
 import * as ItemSelector from './components/ItemSelector/ItemSelector.js';
@@ -19,7 +18,7 @@ import * as Heatmap from './components/Heatmap/Heatmap.js';
 import * as Battles from './components/Battles/Battles.js';
 import * as SalesTable from './components/SalesTable/SalesTable.js';
 
-const sync = { running: false, lastSync: null, lastError: null, note: '', history: null };
+const sync = { running: false, lastSync: null, lastError: null, history: null, firstLoad: false, page: 0, pages: 0 };
 const REFRESH_MS = 60_000;        // normal cadence
 const CATCH_UP_MS = 3_000;        // while the selected item still has older sales to fetch
 let timer = null;
@@ -75,13 +74,14 @@ async function refresh() {
   const c = code();
   try {
     const key = await ApiKey.requireKey();
-    const first = state.txs.length === 0;
-    await syncItem(c, key, p => {
-      if (p.phase === 'new' && first) sync.note = `loading history, page ${p.page} of ${p.maxPages}…`;
-      else if (p.phase === 'older') sync.note = `loading older sales, back to ${p.oldest ? fmtDate(p.oldest) : '…'}`;
-      else return;
-      status();
+    sync.firstLoad = state.txs.length === 0;
+    sync.page = 0;
+    status();
+    await syncItem(c, key, async p => {
+      if (p.phase === 'new' && sync.firstLoad) { sync.page = p.page; sync.pages = p.maxPages; status(); }
+      else if (p.phase === 'older' && c === code()) { sync.history = await historyStatus(c); status(); }
     });
+    sync.firstLoad = false;
     sync.history = await historyStatus(c);
     if (c === code()) {
       state.txs = await getTransactions(c);
@@ -89,12 +89,11 @@ async function refresh() {
       render();
     }
     if (state.battlesOn) {
-      const noBattles = state.battles.length === 0;
-      await syncBattles(key, p => { if (noBattles) { sync.note = `loading battles, page ${p.page} of ${p.maxPages}…`; status(); } });
+      await syncBattles(key, () => {});
       state.battles = await getBattles();
       state.countries = await getCountries();
     }
-    sync.note = ''; sync.lastSync = Date.now(); sync.lastError = null;
+    sync.lastSync = Date.now(); sync.lastError = null;
     if (c === code()) {
       state.txs = await getTransactions(c);
       if (state.battlesOn) tagBattles(state.txs);
@@ -109,7 +108,7 @@ async function refresh() {
       await ApiKey.askForKey('Your saved API key was rejected, please enter a valid one.');
       return refresh();
     }
-    sync.lastError = err.message; sync.note = '';
+    sync.lastError = err.message;
   } finally {
     sync.running = false;
     status();
