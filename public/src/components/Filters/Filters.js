@@ -11,7 +11,7 @@ let onChange = () => {};
 export function init(handlers) {
   onChange = handlers.onChange;
   $('#days').onchange = e => { state.days = Number(e.target.value); onChange(); };
-  $('#mode').onchange = e => { state.mode = e.target.value; onChange(); };
+  $('#mode').onchange = e => { state.mode = e.target.value; renderStatInputs(); onChange(); };
   $('#excludeQuick').checked = state.excludeQuick;
   $('#excludeQuick').onchange = e => { setting('excludeQuick', e.target.checked ? '1' : '0'); state.excludeQuick = e.target.checked; onChange(); };
   $('#quickSecs').value = String(state.quickSecs);
@@ -27,7 +27,8 @@ export function renderStatInputs() {
     const [lo, hi] = it.ranges[key];
     const wrap = document.createElement('label');
     wrap.className = 'field';
-    wrap.innerHTML = `<span>Min ${statLabel(key)}</span>
+    const label = state.mode === 'exact' ? `${statLabel(key)} (exact)` : state.mode === 'near' ? `${statLabel(key)} (±5%)` : `Min ${statLabel(key)}`;
+    wrap.innerHTML = `<span>${label}</span>
       <input type="number" inputmode="numeric" min="${lo}" max="${hi}" placeholder="${lo}–${hi}" value="${state.minStats[key] ?? ''}">
       <span class="hint">possible: ${lo} – ${hi}</span>`;
     const input = wrap.querySelector('input');

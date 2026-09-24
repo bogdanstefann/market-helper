@@ -11,6 +11,7 @@ export function matches(t) {
     const have = t.skills[k];
     if (typeof have !== 'number') return false;
     if (state.mode === 'min' && have < want) return false;
+    if (state.mode === 'exact' && have !== want) return false;
     if (state.mode === 'near' && Math.abs(have - want) > Math.max(1, want * 0.05)) return false;
   }
   return true;
