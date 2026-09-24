@@ -1,5 +1,5 @@
 /* Scatter of price vs. the primary stat, with lowest/median lines and the target marker. */
-import { state, primaryStat, setting } from '../../store/state.js';
+import { state, item, primaryStat, setting } from '../../store/state.js';
 import { $, fmtMoney, fmtDate, statLabel } from '../../lib/format.js';
 import { cssVar, hexA } from '../../lib/colors.js';
 import { aggregateByStat, statsText, isQuick, battleText } from '../../lib/analysis.js';
@@ -13,9 +13,21 @@ export function init(handlers) {
   $('#showAll').onchange = e => { setting('showAll', e.target.checked ? '1' : '0'); state.showAll = e.target.checked; onChange(); };
 }
 
+/** For two-stat items the second stat (critical chance) sets the point size: small at its minimum, large at its maximum. */
+function sizeScale() {
+  const it = item();
+  if (it.stats.length < 2) return null;
+  const key = it.stats[1];
+  const [lo, hi] = it.ranges[key];
+  return { key, lo, hi, radius: (t, base) => { const v = t.skills[key]; if (typeof v !== 'number' || hi === lo) return base; return base + 5 * Math.min(1, Math.max(0, (v - lo) / (hi - lo))); } };
+}
+
 export function render({ period, matched, hasFilter }) {
   const key = primaryStat();
+  const size = sizeScale();
   $('#chartTitle').textContent = `Price vs. ${statLabel(key)}`;
+  $('#legendSize').innerHTML = size ? `<i class="dot size s"></i><i class="dot size l"></i> size = ${statLabel(size.key).toLowerCase()} (${size.lo} → ${size.hi})` : '';
+  const r = (base) => size ? (ctx => ctx.raw ? size.radius(ctx.raw.t, base) : base) : base;
   const matchedIds = new Set(matched.map(t => t.id));
   const pt = t => ({ x: t.skills[key] ?? 0, y: t.price, t });
   const showAll = state.showAll || !hasFilter;
@@ -27,8 +39,8 @@ export function render({ period, matched, hasFilter }) {
   const datasets = [
     { type: 'line', label: 'Lowest price', data: floor, borderColor: cssVar('--line-floor'), borderWidth: 2, pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 0 },
     { type: 'line', label: 'Median price', data: median, borderColor: cssVar('--line-median'), borderWidth: 2, borderDash: [6, 4], pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 1 },
-    { type: 'scatter', label: hasFilter ? 'Match the filter' : 'Sales', data: hits, backgroundColor: hexA(cssVar(hasFilter ? '--series-2' : '--series-1'), 0.85), pointRadius: hasFilter ? 5 : 3, pointHoverRadius: 8, order: 2 },
-    { type: 'scatter', label: 'Other sales', data: others, backgroundColor: hexA(cssVar('--series-1'), 0.22), pointRadius: 2.5, pointHoverRadius: 6, order: 3 },
+    { type: 'scatter', label: hasFilter ? 'Match the filter' : 'Sales', data: hits, backgroundColor: hexA(cssVar(hasFilter ? '--series-2' : '--series-1'), size ? 0.7 : 0.85), pointRadius: r(hasFilter ? 3 : 2), pointHoverRadius: r(hasFilter ? 6 : 5), order: 2 },
+    { type: 'scatter', label: 'Other sales', data: others, backgroundColor: hexA(cssVar('--series-1'), 0.22), pointRadius: r(1.5), pointHoverRadius: r(4), order: 3 },
   ];
   const target = state.minStats[key];
 
