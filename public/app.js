@@ -203,7 +203,7 @@ function attachBattleTooltip() {
   const tbody = $('#table tbody'), tip = $('#battleTip');
   tbody.onmouseover = e => {
     const sym = e.target.closest('.bsym');
-    if (!sym) return;
+    if (!sym) { tip.hidden = true; return; }
     const tr = sym.closest('tr');
     const t = state.txs.find(x => x.id === tr?.dataset.id);
     if (!t) return;
@@ -223,6 +223,7 @@ function attachBattleTooltip() {
     place(e);
   };
   tbody.onmousemove = e => { if (!tip.hidden) place(e); };
+  tbody.onmouseout = e => { if (e.target.closest('.bsym') && !e.relatedTarget?.closest?.('.bsym')) tip.hidden = true; };
   tbody.onmouseleave = () => { tip.hidden = true; };
   function place(e) {
     const pad = 14;
