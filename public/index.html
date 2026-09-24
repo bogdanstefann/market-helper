@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WarEra Market Helper</title>
+<link rel="stylesheet" href="/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>WarEra Market Helper</h1>
+    <p class="sub">Recent item-market sales for weapons and equipment. Pick an item and rarity, enter the stats you want and see the best price paid.</p>
+  </div>
+  <div class="status" id="status">loading…</div>
+</header>
+
+<main>
+  <section class="panel controls">
+    <div class="items" id="slots"></div>
+    <div class="items rarities" id="rarities"></div>
+    <div class="filters">
+      <div class="stat-inputs" id="statInputs"></div>
+      <label class="field">
+        <span>Period</span>
+        <select id="days">
+          <option value="1">last 24h</option>
+          <option value="3">last 3 days</option>
+          <option value="7" selected>last 7 days</option>
+          <option value="14">last 14 days</option>
+          <option value="0">all history</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Match</span>
+        <select id="mode">
+          <option value="min" selected>stats ≥ my values</option>
+          <option value="near">stats close to mine (±5%)</option>
+        </select>
+      </label>
+    </div>
+    <div class="formula" id="formula"></div>
+  </section>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2 id="chartTitle">Price vs. stat</h2>
+      <span class="legend"><i class="line floor"></i> lowest price <i class="line median"></i> median price <i class="dot match"></i> match the filter <i class="dot other" id="legendOther"></i><span id="legendOtherText"> other sales</span></span>
+      <label class="check"><input type="checkbox" id="showAll" checked> Show all sales on chart</label>
+    </div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Matching sales</h2>
+      <span class="muted" id="tableInfo"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="table">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

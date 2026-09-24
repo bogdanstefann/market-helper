@@ -1,0 +1,10 @@
+{
+  "name": "warera-market-helper",
+  "version": "1.0.0",
+  "description": "Tracks mythic item prices on the WarEra item market",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": { "node": ">=20" }
+}
