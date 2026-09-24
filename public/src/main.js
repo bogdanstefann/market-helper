@@ -20,6 +20,16 @@ import * as Battles from './components/Battles/Battles.js';
 import * as SalesTable from './components/SalesTable/SalesTable.js';
 
 const sync = { running: false, lastSync: null, lastError: null, note: '', history: null };
+const REFRESH_MS = 60_000;        // normal cadence
+const CATCH_UP_MS = 3_000;        // while the selected item still has older sales to fetch
+let timer = null;
+
+/** Next sync: soon while history is incomplete, otherwise once a minute. */
+function scheduleNext() {
+  clearTimeout(timer);
+  const soon = sync.history && !sync.history.complete && !sync.lastError;
+  timer = setTimeout(refresh, soon ? CATCH_UP_MS : REFRESH_MS);
+}
 const status = () => StatusBar.render(sync);
 
 // ---- render ----
@@ -35,6 +45,8 @@ function render() {
 
 // ---- data flow ----
 async function selectItem(slot, rarity) {
+  clearTimeout(timer);
+  sync.history = null;
   state.slot = slot; state.rarity = rarity;
   saveSelection();
   state.minStats = {};
@@ -57,7 +69,7 @@ async function loadTransactions() {
 }
 
 async function refresh() {
-  if (sync.running) return;
+  if (sync.running) { sync.rerun = true; return; } // e.g. item switched mid-sync: run again right after
   sync.running = true;
   status();
   const c = code();
@@ -101,6 +113,7 @@ async function refresh() {
   } finally {
     sync.running = false;
     status();
+    if (sync.rerun) { sync.rerun = false; refresh(); } else scheduleNext();
   }
 }
 
@@ -134,5 +147,4 @@ SalesTable.init();
   Filters.renderStatInputs();
   await ApiKey.requireKey();
   await loadTransactions();
-  setInterval(refresh, 60_000);
 })();
