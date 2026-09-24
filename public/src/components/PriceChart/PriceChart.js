@@ -1,7 +1,7 @@
 /* Scatter of price vs. the primary stat, with lowest/median lines and the target marker. */
 import { state, item, primaryStat, setting } from '../../store/state.js';
 import { $, fmtMoney, fmtDate, statLabel } from '../../lib/format.js';
-import { cssVar, hexA } from '../../lib/colors.js';
+import { cssVar, hexA, mix } from '../../lib/colors.js';
 import { aggregateByStat, statsText, isQuick, battleText } from '../../lib/analysis.js';
 
 let chart = null;
@@ -13,21 +13,29 @@ export function init(handlers) {
   $('#showAll').onchange = e => { setting('showAll', e.target.checked ? '1' : '0'); state.showAll = e.target.checked; onChange(); };
 }
 
-/** For two-stat items the second stat (critical chance) sets the point size: small at its minimum, large at its maximum. */
-function sizeScale() {
+/**
+ * For two-stat items the second stat (critical chance) sets the colour of the
+ * matching points: light at the filter's minimum (or the item's minimum),
+ * dark at the item's maximum. One hue, light -> dark.
+ */
+const LIGHT = [253, 224, 200], DARK = [179, 53, 10];
+function colorScale() {
   const it = item();
   if (it.stats.length < 2) return null;
   const key = it.stats[1];
-  const [lo, hi] = it.ranges[key];
-  return { key, lo, hi, radius: (t, base) => { const v = t.skills[key]; if (typeof v !== 'number' || hi === lo) return base; return base + 5 * Math.min(1, Math.max(0, (v - lo) / (hi - lo))); } };
+  const [itemLo, hi] = it.ranges[key];
+  const lo = Math.min(hi, Math.max(itemLo, state.minStats[key] ?? itemLo));
+  const k = t => { const v = t.skills[key]; return typeof v !== 'number' || hi === lo ? 1 : Math.min(1, Math.max(0, (v - lo) / (hi - lo))); };
+  return { key, lo, hi, color: t => mix(LIGHT, DARK, k(t)) };
 }
 
 export function render({ period, matched, hasFilter }) {
   const key = primaryStat();
-  const size = sizeScale();
+  const scale = colorScale();
   $('#chartTitle').textContent = `Price vs. ${statLabel(key)}`;
-  $('#legendSize').innerHTML = size ? `<i class="dot size s"></i><i class="dot size l"></i> size = ${statLabel(size.key).toLowerCase()} (${size.lo} → ${size.hi})` : '';
-  const r = (base) => size ? (ctx => ctx.raw ? size.radius(ctx.raw.t, base) : base) : base;
+  $('#legendSize').innerHTML = scale
+    ? `<span class="ramp-legend">${statLabel(scale.key).toLowerCase()} ${scale.lo} <i class="ramp" style="background:linear-gradient(90deg, ${mix(LIGHT, DARK, 0)}, ${mix(LIGHT, DARK, 1)})"></i> ${scale.hi}</span>`
+    : '';
   const matchedIds = new Set(matched.map(t => t.id));
   const pt = t => ({ x: t.skills[key] ?? 0, y: t.price, t });
   const showAll = state.showAll || !hasFilter;
@@ -39,8 +47,10 @@ export function render({ period, matched, hasFilter }) {
   const datasets = [
     { type: 'line', label: 'Lowest price', data: floor, borderColor: cssVar('--line-floor'), borderWidth: 2, pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 0 },
     { type: 'line', label: 'Median price', data: median, borderColor: cssVar('--line-median'), borderWidth: 2, borderDash: [6, 4], pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 1 },
-    { type: 'scatter', label: hasFilter ? 'Match the filter' : 'Sales', data: hits, backgroundColor: hexA(cssVar(hasFilter ? '--series-2' : '--series-1'), size ? 0.7 : 0.85), pointRadius: r(hasFilter ? 3 : 2), pointHoverRadius: r(hasFilter ? 6 : 5), order: 2 },
-    { type: 'scatter', label: 'Other sales', data: others, backgroundColor: hexA(cssVar('--series-1'), 0.22), pointRadius: r(1.5), pointHoverRadius: r(4), order: 3 },
+    { type: 'scatter', label: hasFilter ? 'Match the filter' : 'Sales', data: hits,
+      backgroundColor: scale ? (ctx => ctx.raw ? scale.color(ctx.raw.t) : cssVar('--series-2')) : hexA(cssVar(hasFilter ? '--series-2' : '--series-1'), 0.85),
+      pointRadius: hasFilter ? 5 : 3.5, pointHoverRadius: 8, order: 2 },
+    { type: 'scatter', label: 'Other sales', data: others, backgroundColor: hexA(cssVar('--series-1'), 0.22), pointRadius: 2.5, pointHoverRadius: 6, order: 3 },
   ];
   const target = state.minStats[key];
 

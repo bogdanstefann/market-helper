@@ -7,6 +7,5 @@
 .line.floor { border-color: var(--line-floor); }
 .line.median { border-color: var(--line-median); border-top-style: dashed; }
 @media (max-width: 600px) { .chart-wrap { height: 260px; } }
-.dot.size { background: var(--text-2); margin-right: 0; }
-.dot.size.s { width: 5px; height: 5px; margin-left: 12px; }
-.dot.size.l { width: 12px; height: 12px; margin-left: 3px; margin-right: 6px; }
+.ramp-legend { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; }
+.ramp { display: inline-block; width: 60px; height: 8px; border-radius: 4px; }
