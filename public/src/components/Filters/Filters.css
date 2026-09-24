@@ -17,6 +17,6 @@
 .formula:not(:empty) { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .check { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .check input { accent-color: var(--series-2); margin: 0; }
-.stat-inline select.mode { min-width: 0; width: 64px; padding: 0 22px 0 10px; font-weight: 700; font-size: 20px; line-height: 1; color: var(--series-2); }
+.stat-inline select.mode { min-width: 0; width: 64px; padding: 0 22px 0 10px; font-weight: 700; font-size: 17px; line-height: 34px; color: var(--series-2); }
 .stat-inline select.mode option { font-size: 16px; }
 .stat-inline input { min-width: 0; width: 100px; }
