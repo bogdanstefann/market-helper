@@ -52,8 +52,8 @@ export function pricePerPoint(t) {
 }
 export const statsText = t => item().stats.map(k => `${statLabel(k)} ${t.skills[k] ?? '–'}`).join(', ');
 
-/** Lowest and median price per stat value, smoothed over ±1 neighbouring values. */
-export function aggregateByStat(list, key) {
+/** Lowest and median price per stat value, smoothed over ±window neighbouring values. */
+export function aggregateByStat(list, key, window = 1) {
   const byX = new Map();
   for (const t of list) {
     const x = t.skills[key];
@@ -65,7 +65,7 @@ export function aggregateByStat(list, key) {
   const floor = [], median = [];
   for (const x of xs) {
     const prices = [];
-    for (const nx of xs) if (Math.abs(nx - x) <= 1) prices.push(...byX.get(nx));
+    for (const nx of xs) if (Math.abs(nx - x) <= window) prices.push(...byX.get(nx));
     prices.sort((a, b) => a - b);
     floor.push({ x, y: prices[0] });
     median.push({ x, y: prices[Math.floor(prices.length / 2)] });

@@ -26,7 +26,24 @@ function colorScale() {
   const [itemLo, hi] = it.ranges[key];
   const lo = Math.min(hi, Math.max(itemLo, state.minStats[key] ?? itemLo));
   const k = t => { const v = t.skills[key]; return typeof v !== 'number' || hi === lo ? 1 : Math.min(1, Math.max(0, (v - lo) / (hi - lo))); };
-  return { key, lo, hi, color: t => mix(LIGHT, DARK, k(t)) };
+  const colorAt = v => mix(LIGHT, DARK, hi === lo ? 1 : Math.min(1, Math.max(0, (v - lo) / (hi - lo))));
+  return { key, lo, hi, color: t => mix(LIGHT, DARK, k(t)), colorAt };
+}
+
+/** One median-price line per value of the second stat, so equal-crit sales can be followed across attack. */
+function levelLines(matched, primary, scale) {
+  const lines = [];
+  for (let v = scale.lo; v <= scale.hi; v++) {
+    const list = matched.filter(t => t.skills[scale.key] === v);
+    if (list.length < 3) continue;
+    const { median } = aggregateByStat(list, primary, 2);
+    lines.push({
+      type: 'line', label: `${statLabel(scale.key)} ${v}`,
+      data: median.map(pt => ({ ...pt, level: v, n: list.length })),
+      borderColor: scale.colorAt(v), borderWidth: 1.5, pointRadius: 0, pointHitRadius: 6, tension: 0.3, order: 1,
+    });
+  }
+  return lines;
 }
 
 export function render({ period, matched, hasFilter }) {
@@ -34,8 +51,9 @@ export function render({ period, matched, hasFilter }) {
   const scale = colorScale();
   $('#chartTitle').textContent = `Price vs. ${statLabel(key)}`;
   $('#legendSize').innerHTML = scale
-    ? `<span class="ramp-legend">${statLabel(scale.key).toLowerCase()} ${scale.lo} <i class="ramp" style="background:linear-gradient(90deg, ${mix(LIGHT, DARK, 0)}, ${mix(LIGHT, DARK, 1)})"></i> ${scale.hi}</span>`
+    ? `<span class="ramp-legend">${statLabel(scale.key).toLowerCase()} ${scale.lo} <i class="ramp" style="background:linear-gradient(90deg, ${mix(LIGHT, DARK, 0)}, ${mix(LIGHT, DARK, 1)})"></i> ${scale.hi} · lines = median per ${statLabel(scale.key).toLowerCase()}</span>`
     : '';
+  $('#legendMedian').style.display = scale ? 'none' : '';
   const matchedIds = new Set(matched.map(t => t.id));
   const pt = t => ({ x: t.skills[key] ?? 0, y: t.price, t });
   const showAll = state.showAll || !hasFilter;
@@ -46,7 +64,9 @@ export function render({ period, matched, hasFilter }) {
 
   const datasets = [
     { type: 'line', label: 'Lowest price', data: floor, borderColor: cssVar('--line-floor'), borderWidth: 2, pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 0 },
-    { type: 'line', label: 'Median price', data: median, borderColor: cssVar('--line-median'), borderWidth: 2, borderDash: [6, 4], pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 1 },
+    ...(scale
+      ? levelLines(matched, key, scale)
+      : [{ type: 'line', label: 'Median price', data: median, borderColor: cssVar('--line-median'), borderWidth: 2, borderDash: [6, 4], pointRadius: 0, pointHitRadius: 0, tension: 0.25, order: 1 }]),
     { type: 'scatter', label: hasFilter ? 'Match the filter' : 'Sales', data: hits,
       backgroundColor: scale ? (ctx => ctx.raw ? scale.color(ctx.raw.t) : cssVar('--series-2')) : hexA(cssVar(hasFilter ? '--series-2' : '--series-1'), 0.85),
       pointRadius: hasFilter ? 5 : 3.5, pointHoverRadius: 8, order: 2 },
@@ -72,10 +92,11 @@ export function render({ period, matched, hasFilter }) {
         legend: { display: false },
         targetLine: { x: target },
         tooltip: {
-          filter: i => i.raw.t,
+          filter: i => i.raw.t || i.raw.level != null,
           callbacks: {
-            title: items => items.map(i => fmtDate(i.raw.t.ts)).join(''),
+            title: items => items.map(i => i.raw.t ? fmtDate(i.raw.t.ts) : `${statLabel(key)} ${i.raw.x}`).join(''),
             label: i => {
+              if (i.raw.level != null) return ` ${i.dataset.label}: median ${fmtMoney(i.raw.y)} (${i.raw.n} sales)`;
               const lines = [` ${fmtMoney(i.raw.y)} · ${statsText(i.raw.t)}${isQuick(i.raw.t) ? ' · quick sale' : ''}`];
               if (state.battlesOn) lines.push(` ${battleText(i.raw.t)}`);
               return lines;
