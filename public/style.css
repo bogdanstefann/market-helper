@@ -156,3 +156,9 @@ button.link:hover { color: var(--text); }
 .btn { background: var(--series-1); color: #fff; border: 0; border-radius: 8px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; }
 .btn:disabled { opacity: .6; cursor: default; }
 .err { color: var(--r-mythic); margin: 0; font-size: 13px; }
+
+.battle-tip { position: fixed; max-width: 420px; }
+.heat-tip .brow { gap: 20px; }
+.heat-tip .brow .muted { font-size: 11px; }
+.heat-tip .brow .bsym { min-width: 14px; height: 14px; line-height: 14px; font-size: 10px; margin-right: 2px; }
+tbody .bsym:not(.quick) { cursor: help; }

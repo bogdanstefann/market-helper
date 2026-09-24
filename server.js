@@ -251,6 +251,21 @@ async function syncBattles({ backfill }) {
   }
 }
 
+/** Country id -> { name, code }, refreshed once a day (no key needed). */
+const countries = new Map();
+let countriesAt = 0;
+async function syncCountries() {
+  if (Date.now() - countriesAt < 86_400_000) return;
+  try {
+    const res = await fetch(`${API_BASE}/country.getAllCountries`);
+    const body = await res.json();
+    for (const c of body.result?.data || []) countries.set(c._id, { name: c.name, code: c.code });
+    countriesAt = Date.now();
+  } catch (err) {
+    console.error('[countries] error:', err.message);
+  }
+}
+
 async function syncAll({ backfill = false } = {}) {
   if (status.syncing) return;
   status.syncing = true;
@@ -260,6 +275,7 @@ async function syncAll({ backfill = false } = {}) {
       total += await syncItem(code, { backfill });
       if (backfill) console.log(`[backfill] ${code}: ${store.size} total`);
     }
+    await syncCountries();
     await syncBattles({ backfill: !battlesBackfilled });
     battlesBackfilled = true;
     pruneOld();
@@ -332,7 +348,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/battles') {
-    return json(res, 200, { battles: [...battles.values()].sort((a, b) => b.start - a.start), status: status.battles });
+    return json(res, 200, { battles: [...battles.values()].sort((a, b) => b.start - a.start), countries: Object.fromEntries(countries), status: status.battles });
   }
 
   if (url.pathname === '/api/sync' && req.method === 'POST') {

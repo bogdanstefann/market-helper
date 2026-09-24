@@ -32,7 +32,8 @@ the server can sync before anyone opens the page.
   battles active at that moment; a battle is "big" when its biggest round
   reached the configurable damage threshold (default 20 M attacker + defender).
   The table gets a `!` symbol coloured from grey (calm) to red (busiest moments),
-  tooltips get a battle line, and a section compares calm / normal / busy sales
+  tooltips get a battle line, hovering a symbol lists the battles that were
+  running (attacker → defender, type, biggest round damage), and a section compares calm / normal / busy sales
   with two hourly timelines (median price, big battles active). The existing
   charts are not changed.
 - The UI: pick a slot and a rarity, enter the stats you want (minimum, or ±5%),

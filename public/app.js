@@ -17,7 +17,7 @@ const state = {
   heatPct: Number(localStorage.getItem('heatPct')) || 90,
   excludeQuick: localStorage.getItem('excludeQuick') !== '0',
   quickSecs: Number(localStorage.getItem('quickSecs')) || 60,
-  battles: [], battleStatus: {},
+  battles: [], battleStatus: {}, countries: {},
   bigM: Number(localStorage.getItem('bigM')) || 20,
   battlesOn: localStorage.getItem('battlesOn') === '1',
   timelineCharts: null,
@@ -117,6 +117,7 @@ async function loadTransactions() {
   if (b) {
     state.battles = b.battles;
     state.battleStatus = b.status;
+    state.countries = b.countries || {};
     tagBattles(state.txs);
   }
   renderStatus(r.status);
@@ -178,8 +179,53 @@ function battleText(t) {
 }
 function mix(a, b, k) { return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(',')})`; }
 
+const countryName = id => state.countries[id]?.name || (id ? 'Unknown' : '–');
+const fmtM = n => `${(n / 1e6).toFixed(1)} M`;
+/** Battles active at a moment, biggest first. */
+function battlesAt(ts) {
+  return state.battles
+    .filter(b => b.start <= ts && (b.end == null || b.end >= ts))
+    .sort((a, b) => b.maxRound - a.maxRound);
+}
+function battleListHtml(ts, limit = 10) {
+  const list = battlesAt(ts);
+  if (!list.length) return '<div class="row"><span>No battles active</span></div>';
+  const rows = list.slice(0, limit).map(b => {
+    const big = isBigBattle(b);
+    return `<div class="row brow"><span><span class="bsym ${big ? 'big' : 'small'}">!</span> ${countryName(b.attacker)} → ${countryName(b.defender)} <span class="muted">${b.type}</span></span><b>${fmtM(b.maxRound)}</b></div>`;
+  });
+  if (list.length > limit) rows.push(`<div class="row"><span class="muted">+ ${list.length - limit} more</span></div>`);
+  return rows.join('');
+}
+
+/** Hover tooltip on the battle symbols in the sales table: lists the battles active at that sale. */
+function attachBattleTooltip() {
+  const tbody = $('#table tbody'), tip = $('#battleTip');
+  tbody.onmouseover = e => {
+    const sym = e.target.closest('.bsym:not(.quick)');
+    if (!sym || !state.battlesOn) return;
+    const tr = sym.closest('tr');
+    const ts = Number(tr?.dataset.ts);
+    if (!ts) return;
+    const t = state.txs.find(x => x.ts === ts && x.id === tr.dataset.id) || { big: 0, small: 0 };
+    tip.innerHTML = `<div class="t">${fmtDate(ts)} · ${battleText(t)}</div>${battleListHtml(ts)}`;
+    tip.hidden = false;
+    place(e);
+  };
+  tbody.onmousemove = e => { if (!tip.hidden) place(e); };
+  tbody.onmouseleave = () => { tip.hidden = true; };
+  function place(e) {
+    const pad = 14;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    if (x + tip.offsetWidth > window.innerWidth - 8) x = e.clientX - tip.offsetWidth - pad;
+    if (y + tip.offsetHeight > window.innerHeight - 8) y = e.clientY - tip.offsetHeight - pad;
+    tip.style.left = `${Math.max(8, x)}px`; tip.style.top = `${Math.max(8, y)}px`;
+  }
+}
+
 function renderStatus(s) {
   const el = $('#status');
+  if (!s) return;
   if (s.lastError) { el.textContent = `Sync error: ${s.lastError}`; el.className = 'status err'; return; }
   el.className = 'status';
   el.textContent = s.lastSync ? `Updated ${fmtDate(s.lastSync)} · refreshes every 60s${s.keys ? ` · ${s.keys} key${s.keys === 1 ? '' : 's'} in pool` : ''}` : 'Syncing…';
@@ -507,7 +553,11 @@ function renderTimelines(matched) {
       battles: new Chart($('#battleTimeline'), {
         type: 'bar',
         data: { datasets: [{ data: bigCount, backgroundColor: 'rgba(230,103,103,.55)', barPercentage: 1, categoryPercentage: 1 }] },
-        options: { ...common, plugins: { ...common.plugins, tooltip: { callbacks: { title: i => fmtDate(i[0].raw.x), label: i => ` ${i.raw.y} big battle${i.raw.y === 1 ? '' : 's'} active` } } },
+        options: { ...common, plugins: { ...common.plugins, tooltip: { callbacks: {
+          title: i => fmtDate(i[0].raw.x),
+          label: i => ` ${i.raw.y} big battle${i.raw.y === 1 ? '' : 's'} active`,
+          afterBody: i => battlesAt(i[0].raw.x + 1_800_000).filter(isBigBattle).slice(0, 8).map(b => ` ${countryName(b.attacker)} → ${countryName(b.defender)} · ${fmtM(b.maxRound)}`),
+        } } },
           scales: { x: xScale, y: { beginAtZero: true, title: { display: true, text: 'Big battles', color: text }, grid: { color: grid }, ticks: { color: text, precision: 0 } } } },
       }),
     };
@@ -702,7 +752,7 @@ function renderTable(matched, hasFilter) {
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="${cols.length}" class="empty">No sales with these stats in the selected period. Try lower values or a longer period.</td></tr>`;
   } else {
-    tbody.innerHTML = rows.slice(0, 300).map(t => `<tr class="${t.id === bestId ? 'best' : ''}">${cols.map(c => {
+    tbody.innerHTML = rows.slice(0, 300).map(t => `<tr class="${t.id === bestId ? 'best' : ''}" data-ts="${t.ts}" data-id="${t.id}">${cols.map(c => {
       const v = val(t, c.key);
       let text;
       if (c.key === 'ts') text = fmtDate(t.ts);
@@ -710,9 +760,9 @@ function renderTable(matched, hasFilter) {
       else if (c.key === 'ppp') text = Number.isFinite(v) ? fmtMoney(v) : '–';
       else if (c.key === 'pts') text = v.toFixed(1);
       else if (c.key === 'battle') text = battleSymbol(t);
-      if (c.key === 'ts' && isQuick(t)) text += ' <span class="bsym quick" title="bought under ' + state.quickSecs + 's after listing">⚡</span>';
       else if (c.key === 'state') text = t.state != null ? `${t.state}/${t.maxState}` : '–';
       else text = Number.isFinite(v) ? v : '–';
+      if (c.key === 'ts' && isQuick(t)) text += ' <span class="bsym quick" title="bought under ' + state.quickSecs + 's after listing">⚡</span>';
       return `<td class="${c.num ? 'num' : ''}">${text}</td>`;
     }).join('')}</tr>`).join('');
   }
@@ -738,6 +788,7 @@ $('#heatScale').querySelectorAll('button').forEach(b => {
     render();
   };
 });
+attachBattleTooltip();
 $('#battleEnable').onclick = () => setBattlesOn(true);
 $('#battleDisable').onclick = () => setBattlesOn(false);
 $('#bigM').value = String(state.bigM);
