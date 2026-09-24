@@ -28,7 +28,9 @@ export function currentView() {
   const base = baseTxs();
   const period = base.filter(inPeriod);
   const matched = period.filter(matches);
-  return { base, period, matched, hasFilter: hasFilter() };
+  // quick sales that would have been in the period but are excluded
+  const excludedQuick = state.excludeQuick ? state.txs.filter(t => isQuick(t) && inPeriod(t)).length : 0;
+  return { base, period, matched, hasFilter: hasFilter(), excludedQuick };
 }
 
 // ---- scoring ----

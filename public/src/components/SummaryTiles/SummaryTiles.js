@@ -3,7 +3,7 @@ import { state, item, primaryStat } from '../../store/state.js';
 import { $, fmtMoney, fmtDate, median, statLabel } from '../../lib/format.js';
 import { points, pricePerPoint, statsText } from '../../lib/analysis.js';
 
-export function render({ period, matched, hasFilter }) {
+export function render({ period, matched, hasFilter, excludedQuick }) {
   const prices = matched.map(t => t.price);
   const min = prices.length ? Math.min(...prices) : null;
   const med = median(prices);
@@ -16,7 +16,7 @@ export function render({ period, matched, hasFilter }) {
     { k: 'Median price', v: med != null ? fmtMoney(med) : '–', d: 'half of the sales were below' },
     { k: 'Last sale', v: last ? fmtMoney(last.price) : '–', d: last ? `${fmtDate(last.ts)} · ${statsText(last)}` : '' },
     { k: `Best price per ${pk}`, v: best ? fmtMoney(pricePerPoint(best)) : '–', d: best ? `${fmtMoney(best.price)} for ${statsText(best)}${it.stats.length > 1 ? ` (${points(best).toFixed(1)} pts)` : ''}` : '' },
-    { k: 'Sales in period', v: period.length, d: hasFilter ? `${matched.length} match` : 'all' },
+    { k: 'Sales in period', v: period.length, d: [hasFilter ? `${matched.length} match` : 'all', excludedQuick ? `${excludedQuick} quick sales excluded` : ''].filter(Boolean).join(' · ') },
   ];
   $('#tiles').innerHTML = tiles.map(t => `<div class="tile ${t.cls || ''}"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="d">${t.d}</div></div>`).join('');
 }

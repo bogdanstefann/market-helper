@@ -44,9 +44,13 @@ export async function getTransactions(code) {
 /** How far back the cache of an item goes, and whether the HISTORY_DAYS window is fully covered. */
 export async function historyStatus(code) {
   const entry = await loadItemCache(code);
-  let oldest = null;
-  for (const t of entry.txs.values()) if (oldest == null || t.ts < oldest) oldest = t.ts;
-  return { count: entry.txs.size, oldest, complete: entry.complete, days: HISTORY_DAYS };
+  const cutoff = Date.now() - HISTORY_DAYS * 86_400_000;
+  let oldest = null, count = 0;
+  for (const t of entry.txs.values()) {
+    if (oldest == null || t.ts < oldest) oldest = t.ts;
+    if (t.ts >= cutoff) count++;
+  }
+  return { count, oldest: Math.max(oldest ?? cutoff, cutoff), complete: entry.complete, days: HISTORY_DAYS };
 }
 
 async function fetchPage(code, key, cursor) {
